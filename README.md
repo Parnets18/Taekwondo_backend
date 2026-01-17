@@ -81,7 +81,7 @@ A comprehensive backend system for managing a martial arts institute with admin 
 
 ### Base URL
 ```
-http://localhost:5000/api
+https://taekwon-frontend.onrender.com/api
 ```
 
 ### Authentication Endpoints
@@ -343,7 +343,7 @@ Use tools like Postman or Thunder Client with the provided endpoints.
 
 ### Health Check
 ```bash
-curl http://localhost:5000/api/health
+curl https://taekwon-frontend.onrender.com/api/health
 ```
 
 ## 📝 Default Admin Account

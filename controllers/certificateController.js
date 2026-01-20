@@ -41,6 +41,114 @@ const upload = multer({
 
 const certificateService = new CertificateService();
 
+// Error response helper function
+const sendErrorResponse = (res, statusCode, message, details = {}) => {
+  const errorResponse = {
+    status: 'error',
+    message,
+    timestamp: new Date().toISOString(),
+    ...details
+  };
+  
+  return res.status(statusCode).json(errorResponse);
+};
+
+// File validation helper function
+const validateCertificateFile = async (certificateId, filePath) => {
+  try {
+    // Check if file exists
+    const stats = await fs.stat(filePath);
+    
+    if (!stats.isFile()) {
+      return {
+        exists: false,
+        readable: false,
+        error: 'Path is not a file'
+      };
+    }
+
+    // Check file permissions
+    try {
+      await fs.access(filePath, fs.constants.R_OK);
+    } catch (accessError) {
+      return {
+        exists: true,
+        readable: false,
+        error: 'File is not readable'
+      };
+    }
+
+    // Determine MIME type based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+    let mimeType = 'application/octet-stream';
+    
+    switch (ext) {
+      case '.pdf':
+        mimeType = 'application/pdf';
+        break;
+      case '.png':
+        mimeType = 'image/png';
+        break;
+      case '.jpg':
+      case '.jpeg':
+        mimeType = 'image/jpeg';
+        break;
+      case '.gif':
+        mimeType = 'image/gif';
+        break;
+    }
+
+    // Basic file integrity check - ensure file is not empty and has reasonable size
+    if (stats.size === 0) {
+      return {
+        exists: true,
+        readable: true,
+        size: stats.size,
+        mimeType,
+        lastModified: stats.mtime,
+        error: 'File is empty'
+      };
+    }
+
+    // Check for reasonable file size (not too large, suggesting corruption)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (stats.size > maxSize) {
+      return {
+        exists: true,
+        readable: true,
+        size: stats.size,
+        mimeType,
+        lastModified: stats.mtime,
+        error: 'File size exceeds maximum limit'
+      };
+    }
+
+    return {
+      exists: true,
+      readable: true,
+      size: stats.size,
+      mimeType,
+      lastModified: stats.mtime,
+      error: null
+    };
+
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return {
+        exists: false,
+        readable: false,
+        error: 'File does not exist'
+      };
+    }
+    
+    return {
+      exists: false,
+      readable: false,
+      error: error.message
+    };
+  }
+};
+
 // Get all certificates with filtering and pagination
 const getCertificates = async (req, res) => {
   try {
@@ -141,6 +249,18 @@ const getCertificateById = async (req, res) => {
 // Create new certificate with image upload
 const createCertificate = async (req, res) => {
   try {
+    // Check for validation errors
+    const { validationResult } = require('express-validator');
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
+      return res.status(400).json({
+        status: 'error',
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
     const {
       studentName,
       instructorName,
@@ -152,6 +272,14 @@ const createCertificate = async (req, res) => {
       examiner,
       customVerificationCode
     } = req.body;
+
+    console.log('📝 Certificate creation request:', {
+      studentName,
+      instructorName,
+      achievementType,
+      achievementTitle,
+      customVerificationCode
+    });
 
     // Validate required fields
     if (!studentName || !instructorName || !achievementType || !achievementTitle) {
@@ -192,6 +320,11 @@ const createCertificate = async (req, res) => {
       const fileBuffer = await fs.readFile(filePath);
       fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
       fileSize = req.file.size;
+      console.log('📁 File uploaded:', {
+        originalName: req.file.originalname,
+        size: fileSize,
+        path: filePath
+      });
     }
 
     // Create certificate data
@@ -217,9 +350,13 @@ const createCertificate = async (req, res) => {
       }
     };
 
+    console.log('💾 Creating certificate with data:', certificateData);
+
     // Create certificate
     const certificate = new Certificate(certificateData);
     await certificate.save();
+
+    console.log('✅ Certificate created successfully:', certificate._id);
 
     // Populate the created certificate
     const populatedCertificate = await Certificate.findById(certificate._id)
@@ -236,7 +373,8 @@ const createCertificate = async (req, res) => {
       data: { certificate: certObj }
     });
   } catch (error) {
-    console.error('Error creating certificate:', error);
+    console.error('❌ Error creating certificate:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({
       status: 'error',
       message: 'Failed to create certificate'
@@ -382,32 +520,122 @@ const verifyCertificate = async (req, res) => {
 // Download certificate
 const downloadCertificate = async (req, res) => {
   try {
-    const certificate = await Certificate.findById(req.params.id);
+    const certificateId = req.params.id;
+    
+    // Validate certificate ID format (MongoDB ObjectId)
+    if (!certificateId || !certificateId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log(`Invalid certificate ID format: ${certificateId}`);
+      return res.status(400).json({
+        status: 'error',
+        code: 'INVALID_ID',
+        message: 'Invalid certificate ID format'
+      });
+    }
+
+    // Find certificate in database
+    const certificate = await Certificate.findById(certificateId);
     if (!certificate) {
+      console.log(`Certificate not found in database: ${certificateId}`);
       return res.status(404).json({
         status: 'error',
+        code: 'CERT_NOT_FOUND',
         message: 'Certificate not found'
       });
     }
 
+    // Check if certificate has a file path
     if (!certificate.filePath) {
+      console.log(`Certificate has no file path: ${certificateId}`);
       return res.status(404).json({
         status: 'error',
-        message: 'Certificate file not found'
+        code: 'FILE_PATH_MISSING',
+        message: 'Certificate file path not found'
       });
     }
 
+    // Validate file existence and accessibility
+    const fileValidation = await validateCertificateFile(certificateId, certificate.filePath);
+    if (!fileValidation.exists) {
+      console.log(`Certificate file does not exist: ${certificate.filePath}`);
+      return res.status(404).json({
+        status: 'error',
+        code: 'FILE_NOT_FOUND',
+        message: 'Certificate file not found on server'
+      });
+    }
+
+    if (!fileValidation.readable) {
+      console.error(`Certificate file not readable: ${certificate.filePath}`);
+      return res.status(500).json({
+        status: 'error',
+        code: 'FILE_ACCESS_ERROR',
+        message: 'Certificate file cannot be accessed'
+      });
+    }
+
+    // Check for file corruption
+    if (fileValidation.error) {
+      console.error(`Certificate file validation error: ${fileValidation.error}`);
+      return res.status(422).json({
+        status: 'error',
+        code: 'FILE_CORRUPTED',
+        message: 'Certificate file appears to be corrupted'
+      });
+    }
+
+    // Set appropriate HTTP headers for file download
+    const fileName = `certificate_${certificate.verificationCode}${path.extname(certificate.filePath)}`;
+    const mimeType = fileValidation.mimeType || 'application/octet-stream';
+    
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', fileValidation.size);
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    // Add CORS headers for frontend access
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length, Content-Type');
+
+    // Log successful download request
+    console.log(`Certificate download initiated: ${certificateId} by ${req.ip || 'unknown'}`);
+    
     // Increment download count
     await certificate.incrementDownloadCount();
 
     // Send file
-    const fileName = `certificate_${certificate.verificationCode}${path.extname(certificate.filePath)}`;
-    res.download(certificate.filePath, fileName);
+    res.download(certificate.filePath, fileName, (err) => {
+      if (err) {
+        console.error(`Error sending certificate file: ${err.message}`);
+        if (!res.headersSent) {
+          return res.status(500).json({
+            status: 'error',
+            code: 'DOWNLOAD_FAILED',
+            message: 'Failed to download certificate file'
+          });
+        }
+      } else {
+        console.log(`Certificate download completed: ${certificateId}`);
+      }
+    });
+
   } catch (error) {
     console.error('Error downloading certificate:', error);
-    res.status(500).json({
+    
+    // Handle specific error types
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        status: 'error',
+        code: 'INVALID_ID',
+        message: 'Invalid certificate ID format'
+      });
+    }
+    
+    return res.status(500).json({
       status: 'error',
-      message: 'Failed to download certificate'
+      code: 'INTERNAL_ERROR',
+      message: 'Internal server error occurred'
     });
   }
 };
@@ -507,5 +735,7 @@ module.exports = {
   downloadCertificate,
   getCertificateStatistics,
   sendCertificateEmail,
+  validateCertificateFile,
+  sendErrorResponse,
   upload
 };

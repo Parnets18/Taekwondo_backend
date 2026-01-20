@@ -40,10 +40,31 @@ app.use(helmet());
 app.use(compression());
 
 // CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : [
+      'https://your-domain.com',
+      'https://taekwon.netlify.app',
+      'http://localhost:3000',
+      'http://localhost:5173', 
+      'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:5176'
+    ];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-domain.com'] 
-    : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', "https://taekwon.netlify.app"],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow any netlify.app subdomain or specifically allowed origins
+    if (origin.endsWith('.netlify.app') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    console.log(`❌ CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 
@@ -245,7 +266,13 @@ app.get('/api/test-simple', (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
+console.log('🔐 Loading auth routes...');
+try {
+  app.use('/api/auth', authRoutes);
+  console.log('✅ Auth routes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading auth routes:', error);
+}
 app.use('/api/admissions', admissionRoutes);
 app.use('/api/admin/admissions', adminAdmissionRoutes);
 app.use('/api/contact', contactRoutes);
@@ -259,7 +286,7 @@ app.use('/api/certificate-templates', certificateTemplateRoutes);
 app.use('/api/fees', feeRoutes);
 app.use('/api/belts', beltRoutes);
 app.use('/api/events', eventRoutes);
-app.use('/api/events', participantRoutes);
+app.use('/api/participants', participantRoutes);
 app.use('/api/attendance', attendanceRoutes);
 
 // Health check endpoint

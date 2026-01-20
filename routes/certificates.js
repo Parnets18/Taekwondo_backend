@@ -30,8 +30,10 @@ const validateCertificateCreation = [
     .withMessage('Instructor name must be between 2 and 100 characters'),
   
   body('achievementType')
-    .isIn(['belt_promotion', 'course_completion', 'special_achievement', 'tournament_award', 'participation'])
-    .withMessage('Invalid achievement type'),
+    .notEmpty()
+    .withMessage('Achievement type is required')
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Achievement type must be between 2 and 100 characters'),
   
   body('achievementTitle')
     .notEmpty()
@@ -61,8 +63,8 @@ const validateCertificateUpdate = [
   
   body('achievementType')
     .optional()
-    .isIn(['belt_promotion', 'course_completion', 'special_achievement', 'tournament_award', 'participation'])
-    .withMessage('Invalid achievement type'),
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Achievement type must be between 2 and 100 characters'),
   
   body('achievementTitle')
     .optional()

@@ -31,7 +31,7 @@ const certificateSchema = new mongoose.Schema({
   achievementType: {
     type: String,
     required: true,
-    enum: ['belt_promotion', 'course_completion', 'special_achievement', 'tournament_award', 'participation']
+    trim: true
   },
   achievementDetails: {
     title: {

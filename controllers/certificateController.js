@@ -66,7 +66,7 @@ const validateCertificateFile = async (certificateId, filePath) => {
         error: 'Path is not a file'
       };
     }
-
+console.log("hii")
     // Check file permissions
     try {
       await fs.access(filePath, fs.constants.R_OK);

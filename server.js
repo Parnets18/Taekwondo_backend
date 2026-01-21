@@ -45,6 +45,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [
       'https://your-domain.com',
       'https://taekwon.netlify.app',
+      'https://taekwond.netlify.app',
       'http://localhost:3000',
       'http://localhost:5173', 
       'http://localhost:5174',

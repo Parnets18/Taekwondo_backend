@@ -16,7 +16,10 @@ const attendanceSchema = new mongoose.Schema({
   },
   checkInTime: {
     type: Date,
-    required: true
+    required: function() {
+      // Only required if status is not 'Absent'
+      return this.status !== 'Absent';
+    }
   },
   checkOutTime: {
     type: Date,
@@ -41,7 +44,7 @@ const attendanceSchema = new mongoose.Schema({
   },
   markedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Admin'
+    ref: 'User'
   }
 }, {
   timestamps: true

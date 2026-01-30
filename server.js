@@ -23,7 +23,7 @@ const beltRoutes = require('./routes/belt');
 const eventRoutes = require('./routes/events');
 const participantRoutes = require('./routes/participants');
 const attendanceRoutes = require('./routes/attendance');
-
+const loginRoutes = require('./routes/login');
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { createDefaultAdmin } = require('./utils/createAdmin');
@@ -39,34 +39,12 @@ app.get('/api/simple-test', (req, res) => {
 app.use(helmet());
 app.use(compression());
 
-// CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : [
-      'https://your-domain.com',
-      'https://taekwon.netlify.app',
-      'https://taekwond.netlify.app',
-      'http://localhost:3000',
-      'http://localhost:5173', 
-      'http://localhost:5174',
-      'http://localhost:5175',
-      'http://localhost:5176'
-    ];
-
+// CORS configuration - Allow all origins for development
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Allow any netlify.app subdomain or specifically allowed origins
-    if (origin.endsWith('.netlify.app') || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    console.log(`❌ CORS blocked origin: ${origin}`);
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
+  origin: true, // Allow all origins in development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Logging
@@ -85,6 +63,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Static files
 // Static files
 app.use('/uploads', express.static('uploads'));
 
@@ -289,6 +268,8 @@ app.use('/api/belts', beltRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/participants', participantRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/login', loginRoutes);
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -298,6 +279,145 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV
   });
+});
+
+// Public belt levels endpoint (no auth required)
+app.get('/api/belts-public', async (req, res) => {
+  try {
+    const Belt = require('./models/Belt');
+    console.log('🧪 Public belt levels endpoint called');
+    
+    const belts = await Belt.find({ isActive: true }).sort({ level: 1 });
+    console.log(`Found ${belts.length} belt levels in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${belts.length} belt levels`,
+      data: { 
+        belts
+      }
+    });
+  } catch (error) {
+    console.error('Public belt levels error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public belt levels failed',
+      error: error.message
+    });
+  }
+});
+
+// Public promotions endpoint (no auth required)
+app.get('/api/promotions-public', async (req, res) => {
+  try {
+    const Promotion = require('./models/Promotion');
+    console.log('🧪 Public promotions endpoint called');
+    
+    const promotions = await Promotion.find({}).sort({ promotionDate: -1 }).limit(50);
+    console.log(`Found ${promotions.length} promotions in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${promotions.length} promotions`,
+      data: { 
+        promotions
+      }
+    });
+  } catch (error) {
+    console.error('Public promotions error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public promotions failed',
+      error: error.message
+    });
+  }
+});
+
+// Public belt tests endpoint (no auth required)
+app.get('/api/belt-tests-public', async (req, res) => {
+  try {
+    const BeltTest = require('./models/BeltTest');
+    console.log('🧪 Public belt tests endpoint called');
+    
+    const upcomingTests = await BeltTest.find({ 
+      testDate: { $gte: new Date() },
+      status: 'scheduled'
+    }).sort({ testDate: 1 }).limit(50);
+    
+    console.log(`Found ${upcomingTests.length} upcoming belt tests in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${upcomingTests.length} upcoming belt tests`,
+      data: { 
+        tests: upcomingTests
+      }
+    });
+  } catch (error) {
+    console.error('Public belt tests error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public belt tests failed',
+      error: error.message
+    });
+  }
+});
+
+// Public events endpoint (no auth required)
+app.get('/api/events-public', async (req, res) => {
+  try {
+    const Event = require('./models/Event');
+    console.log('🧪 Public events endpoint called');
+    
+    const { year, month, status } = req.query;
+    let query = { isActive: true };
+    
+    // Date filtering
+    if (year) {
+      const startOfYear = new Date(year, 0, 1);
+      const endOfYear = new Date(year, 11, 31, 23, 59, 59);
+      
+      if (month && month !== 'All Months') {
+        const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
+        const startOfMonth = new Date(year, monthIndex, 1);
+        const endOfMonth = new Date(year, monthIndex + 1, 0, 23, 59, 59);
+        query.date = { $gte: startOfMonth, $lte: endOfMonth };
+      } else {
+        query.date = { $gte: startOfYear, $lte: endOfYear };
+      }
+    }
+    
+    // Status filtering
+    if (status && status !== 'All Events') {
+      if (status === 'Upcoming') {
+        query.date = { ...query.date, $gte: new Date() };
+      } else if (status === 'Past') {
+        query.date = { ...query.date, $lt: new Date() };
+      }
+    }
+    
+    console.log('🔍 Events Query:', query);
+    
+    const events = await Event.find(query).sort({ date: -1 }).limit(50);
+    console.log(`Found ${events.length} events in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${events.length} events`,
+      data: { 
+        events,
+        count: events.length,
+        query: query
+      }
+    });
+  } catch (error) {
+    console.error('Public events error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public events failed',
+      error: error.message
+    });
+  }
 });
 
 // Test database connection
@@ -359,6 +479,30 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
+// Test events endpoint directly in server.js (no auth required)
+app.get('/api/events-direct-test', async (req, res) => {
+  try {
+    const Event = require('./models/Event');
+    console.log('🧪 Direct events test called');
+    
+    const events = await Event.find({ isActive: true }).limit(5);
+    console.log(`Found ${events.length} events in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${events.length} events`,
+      data: { events }
+    });
+  } catch (error) {
+    console.error('Direct events test error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Direct events test failed',
+      error: error.message
+    });
+  }
+});
+
 // Test contact endpoint directly in server.js
 app.get('/api/contact/direct-test', (req, res) => {
   res.json({ status: 'success', message: 'Direct contact route working' });
@@ -377,8 +521,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+  console.log(`🔗 Local API URL: http://localhost:${PORT}/api`);
+  console.log(`🌐 Network API URL: http://192.168.1.48:${PORT}/api`);
 });

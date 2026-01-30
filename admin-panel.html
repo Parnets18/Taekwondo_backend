@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+        }
+
+        .certificates-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .certificate-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .certificate-info {
+            flex: 1;
+        }
+
+        .certificate-info h4 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .certificate-info p {
+            color: #666;
+            font-size: 12px;
+            margin: 2px 0;
+        }
+
+        .certificate-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .certificate-actions button {
+            padding: 6px 12px;
+            font-size: 12px;
+            flex: none;
+            width: auto;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-box h3 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .stat-box p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 12px;
+            background: #f0f0f0;
+            border: 2px dashed #667eea;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .file-input-label:hover {
+            background: #e8eaf6;
+        }
+
+        .file-name {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            color: #666;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🥋 Certificate Admin Panel</h1>
+            <p>Manage and upload certificates for students</p>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div class="main-content">
+            <!-- Upload Certificate Form -->
+            <div class="card">
+                <h2>📤 Upload Certificate</h2>
+                
+                <div class="tabs">
+                    <button class="tab-button active" onclick="switchTab('upload')">Upload</button>
+                    <button class="tab-button" onclick="switchTab('search')">Search</button>
+                </div>
+
+                <div id="upload" class="tab-content active">
+                    <form id="certificateForm">
+                        <div class="form-group">
+                            <label>Student Name *</label>
+                            <input type="text" id="studentName" placeholder="Enter student name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Instructor Name *</label>
+                            <input type="text" id="instructorName" placeholder="Enter instructor name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Achievement Type *</label>
+                            <select id="achievementType" required>
+                                <option value="">Select achievement type</option>
+                                <option value="Belt Promotion">Belt Promotion</option>
+                                <option value="Tournament">Tournament</option>
+                                <option value="Course Completion">Course Completion</option>
+                                <option value="Achievement">Achievement</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Achievement Title *</label>
+                            <input type="text" id="achievementTitle" placeholder="e.g., Yellow Belt Promotion" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Achievement Description</label>
+                            <textarea id="achievementDescription" placeholder="Enter achievement description"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Level (Optional)</label>
+                            <input type="text" id="level" placeholder="e.g., Yellow Belt, Beginner">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Grade (Optional)</label>
+                            <input type="text" id="grade" placeholder="e.g., A, B, C">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Verification Code *</label>
+                            <input type="text" id="customVerificationCode" placeholder="e.g., CERT2024001" required>
+                            <small style="color: #666; margin-top: 5px; display: block;">Must be uppercase letters and numbers only</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Certificate Image/PDF</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="certificateImage" accept="image/*,.pdf">
+                                <label for="certificateImage" class="file-input-label">
+                                    📎 Click to upload or drag and drop
+                                </label>
+                            </div>
+                            <div class="file-name" id="fileName"></div>
+                        </div>
+
+                        <div class="button-group">
+                            <button type="submit" class="btn-primary">Upload Certificate</button>
+                            <button type="reset" class="btn-secondary">Clear Form</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="search" class="tab-content">
+                    <div class="form-group">
+                        <label>Search by Student Name</label>
+                        <input type="text" id="searchStudent" placeholder="Enter student name" onkeyup="searchCertificates()">
+                    </div>
+                    <div id="searchResults"></div>
+                </div>
+            </div>
+
+            <!-- Certificates List -->
+            <div class="card">
+                <h2>📋 Certificates List</h2>
+                
+                <div class="stats">
+                    <div class="stat-box">
+                        <h3 id="totalCerts">0</h3>
+                        <p>Total Certificates</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="activeCerts">0</h3>
+                        <p>Active</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="revokedCerts">0</h3>
+                        <p>Revoked</p>
+                    </div>
+                </div>
+
+                <div class="certificates-list" id="certificatesList">
+                    <p style="text-align: center; color: #999;">Loading certificates...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://taekwon-frontend.onrender.com/api';
+        let authToken = localStorage.getItem('authToken');
+        let allCertificates = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!authToken) {
+                showAlert('Please login first', 'error');
+                window.location.href = '/login.html';
+                return;
+            }
+            loadCertificates();
+            setupFileInput();
+            setupFormSubmit();
+        });
+
+        // Setup file input
+        function setupFileInput() {
+            const fileInput = document.getElementById('certificateImage');
+            const fileLabel = document.querySelector('.file-input-label');
+            const fileName = document.getElementById('fileName');
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    fileName.textContent = `Selected: ${e.target.files[0].name}`;
+                }
+            });
+
+            // Drag and drop
+            fileLabel.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileLabel.style.background = '#e8eaf6';
+            });
+
+            fileLabel.addEventListener('dragleave', () => {
+                fileLabel.style.background = '#f0f0f0';
+            });
+
+            fileLabel.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileLabel.style.background = '#f0f0f0';
+                fileInput.files = e.dataTransfer.files;
+                if (fileInput.files.length > 0) {
+                    fileName.textContent = `Selected: ${fileInput.files[0].name}`;
+                }
+            });
+        }
+
+        // Setup form submit
+        function setupFormSubmit() {
+            document.getElementById('certificateForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await uploadCertificate();
+            });
+        }
+
+        // Upload certificate
+        async function uploadCertificate() {
+            try {
+                const formData = new FormData();
+                formData.append('studentName', document.getElementById('studentName').value);
+                formData.append('instructorName', document.getElementById('instructorName').value);
+                formData.append('achievementType', document.getElementById('achievementType').value);
+                formData.append('achievementTitle', document.getElementById('achievementTitle').value);
+                formData.append('achievementDescription', document.getElementById('achievementDescription').value);
+                formData.append('level', document.getElementById('level').value);
+                formData.append('grade', document.getElementById('grade').value);
+                formData.append('customVerificationCode', document.getElementById('customVerificationCode').value);
+
+                const fileInput = document.getElementById('certificateImage');
+                if (fileInput.files.length > 0) {
+                    formData.append('certificateImage', fileInput.files[0]);
+                }
+
+                const response = await fetch(`${API_URL}/certificates`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    showAlert('Certificate uploaded successfully!', 'success');
+                    document.getElementById('certificateForm').reset();
+                    document.getElementById('fileName').textContent = '';
+                    loadCertificates();
+                } else {
+                    showAlert(data.message || 'Failed to upload certificate', 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showAlert('Error uploading certificate: ' + error.message, 'error');
+            }
+        }
+
+        // Load certificates
+        async function loadCertificates() {
+            try {
+                const response = await fetch(`${API_URL}/certificates?limit=100`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    allCertificates = data.data.certificates;
+                    displayCertificates(allCertificates);
+                    updateStats();
+                } else {
+                    showAlert('Failed to load certificates', 'error');
+                }
+            } catch (error) {
+                console.error('Load error:', error);
+                showAlert('Error loading certificates: ' + error.message, 'error');
+            }
+        }
+
+        // Display certificates
+        function displayCertificates(certificates) {
+            const list = document.getElementById('certificatesList');
+            
+            if (certificates.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #999;">No certificates found</p>';
+                return;
+            }
+
+            list.innerHTML = certificates.map(cert => `
+                <div class="certificate-item">
+                    <div class="certificate-info">
+                        <h4>${cert.studentName}</h4>
+                        <p><strong>Type:</strong> ${cert.achievementType}</p>
+                        <p><strong>Title:</strong> ${cert.achievementDetails.title}</p>
+                        <p><strong>Code:</strong> ${cert.verificationCode}</p>
+                        <p><strong>Status:</strong> <span style="color: ${cert.status === 'active' ? '#28a745' : '#dc3545'}">${cert.status}</span></p>
+                    </div>
+                    <div class="certificate-actions">
+                        <button class="btn-secondary" onclick="editCertificate('${cert._id}')">Edit</button>
+                        <button class="btn-danger" onclick="deleteCertificate('${cert._id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update stats
+        function updateStats() {
+            document.getElementById('totalCerts').textContent = allCertificates.length;
+            document.getElementById('activeCerts').textContent = allCertificates.filter(c => c.status === 'active').length;
+            document.getElementById('revokedCerts').textContent = allCertificates.filter(c => c.status === 'revoked').length;
+        }
+
+        // Search certificates
+        function searchCertificates() {
+            const query = document.getElementById('searchStudent').value.toLowerCase();
+            const filtered = allCertificates.filter(cert => 
+                cert.studentName.toLowerCase().includes(query)
+            );
+            
+            const results = document.getElementById('searchResults');
+            if (filtered.length === 0) {
+                results.innerHTML = '<p style="color: #999;">No results found</p>';
+            } else {
+                results.innerHTML = filtered.map(cert => `
+                    <div class="certificate-item">
+                        <div class="certificate-info">
+                            <h4>${cert.studentName}</h4>
+                            <p><strong>Type:</strong> ${cert.achievementType}</p>
+                            <p><strong>Code:</strong> ${cert.verificationCode}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Delete certificate
+        async function deleteCertificate(id) {
+            if (!confirm('Are you sure you want to delete this certificate?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/certificates/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    showAlert('Certificate deleted successfully!', 'success');
+                    loadCertificates();
+                } else {
+                    showAlert(data.message || 'Failed to delete certificate', 'error');
+                }
+            } catch (error) {
+                showAlert('Error deleting certificate: ' + error.message, 'error');
+            }
+        }
+
+        // Edit certificate (placeholder)
+        function editCertificate(id) {
+            showAlert('Edit functionality coming soon', 'info');
+        }
+
+        // Switch tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alerts = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alerts.appendChild(alert);
+
+            setTimeout(() => alert.remove(), 5000);
+        }
+    </script>
+</body>
+</html>

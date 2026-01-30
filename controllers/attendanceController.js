@@ -1,7 +1,71 @@
 const Attendance = require('../models/Attendance');
 const Student = require('../models/Student');
 
-// Get all attendance records with filters
+// Public route to get attendance data (no auth required)
+exports.getAttendancePublic = async (req, res) => {
+  try {
+    console.log('📊 Public attendance route called');
+    const { date, startDate, endDate, class: className, status, studentId } = req.query;
+    
+    let query = {};
+    
+    // Handle date filtering - support both single date and date range
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      query.date = { $gte: start, $lte: end };
+      console.log('📅 Date range filter:', { start, end });
+    } else if (date) {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      query.date = { $gte: startDate, $lte: endDate };
+      console.log('📅 Single date filter:', { startDate, endDate });
+    }
+    
+    if (className && className !== 'all') {
+      query.class = className;
+    }
+    
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+    
+    if (studentId) {
+      query.student = studentId;
+    }
+    
+    console.log('🔍 Query:', query);
+    
+    const attendance = await Attendance.find(query)
+      .populate('student', 'fullName email currentBelt studentId courseLevel')
+      .sort({ date: -1, checkInTime: -1 })
+      .limit(100); // Limit to prevent large responses
+    
+    console.log(`✅ Found ${attendance.length} attendance records`);
+    
+    res.status(200).json({
+      status: 'success',
+      data: { 
+        attendance,
+        count: attendance.length,
+        query: query
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching public attendance:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch attendance records',
+      error: error.message
+    });
+  }
+};
+
+// Get all attendance records with filters (protected)
 exports.getAttendance = async (req, res) => {
   try {
     const { date, startDate, endDate, class: className, status, studentId } = req.query;
@@ -36,7 +100,7 @@ exports.getAttendance = async (req, res) => {
     }
     
     const attendance = await Attendance.find(query)
-      .populate('student', 'fullName email beltLevel studentId courseLevel')
+      .populate('student', 'fullName email currentBelt studentId courseLevel')
       .sort({ date: -1, checkInTime: -1 });
     
     res.status(200).json({

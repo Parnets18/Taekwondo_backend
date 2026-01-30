@@ -1,26 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth');
 const eventController = require('../controllers/eventController');
+const { protect, staffOnly, adminOnly } = require('../middleware/auth');
 
-console.log('📅 Events routes loading...');
+// Test route (no auth required)
+router.get('/test', (req, res) => {
+  console.log('📅 Events test route called');
+  res.json({ 
+    status: 'success', 
+    message: 'Events routes working',
+    timestamp: new Date().toISOString()
+  });
+});
 
-// All routes require authentication
-router.use(protect);
+// Public routes (no auth required) - MUST BE BEFORE protect middleware
+router.get('/public', eventController.getEventsPublic);
+router.get('/public/:id', eventController.getEventById);
 
-// Statistics route
-router.get('/statistics', eventController.getEventStatistics);
+// Protected routes (require authentication)
+router.get('/', protect, eventController.getEvents);
+router.get('/:id', protect, eventController.getEventById);
 
-// Sync participant counts route
-router.post('/sync-participants', eventController.syncParticipantCounts);
+// Student routes (require authentication)
+router.post('/:id/register', protect, eventController.registerForEvent);
+router.post('/:id/unregister', protect, eventController.unregisterFromEvent);
 
-// Event routes
-router.get('/', eventController.getEvents);
-router.get('/:id', eventController.getEventById);
-router.post('/', eventController.createEvent);
-router.put('/:id', eventController.updateEvent);
-router.delete('/:id', eventController.deleteEvent);
+// Statistics route (require authentication)
+router.get('/stats/overview', protect, eventController.getEventStatistics);
 
-console.log('📅 Events routes configured');
+// Staff only routes (admin and instructors)
+router.post('/', protect, staffOnly, eventController.createEvent);
+router.put('/:id', protect, staffOnly, eventController.updateEvent);
+
+// Admin only routes
+router.delete('/:id', protect, adminOnly, eventController.deleteEvent);
 
 module.exports = router;

@@ -158,6 +158,13 @@ const getCertificates = async (req, res) => {
 
     // Build filter object
     const filter = {};
+    
+    // If this is a student (not staff), filter by student name or ID
+    if (req.user && req.user.role === 'student') {
+      // Filter by current student
+      filter.studentId = req.user._id;
+    }
+    
     if (req.query.status) {
       filter.status = req.query.status;
     }

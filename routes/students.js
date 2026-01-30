@@ -17,6 +17,34 @@ router.get('/test', (req, res) => {
   res.json({ status: 'success', message: 'Students routes working' });
 });
 
+// Public route to get students (no auth required for testing)
+router.get('/public', async (req, res) => {
+  try {
+    console.log('👥 Public students route called');
+    const students = await Student.find({ status: 'active' })
+      .select('fullName email currentBelt studentId courseLevel enrollmentDate')
+      .sort({ fullName: 1 })
+      .limit(50);
+    
+    console.log(`✅ Found ${students.length} students`);
+    
+    res.status(200).json({
+      status: 'success',
+      data: { 
+        students,
+        count: students.length
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching public students:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch students',
+      error: error.message
+    });
+  }
+});
+
 // Apply authentication to all routes below this point
 router.use(protect);
 
@@ -44,11 +72,11 @@ router.delete('/admin/delete-all', adminOnly, async (req, res) => {
 
 // Student CRUD routes
 router.route('/')
-  .get(staffOnly, getStudents)
+  .get(getStudents) // Allow any authenticated user to get students
   .post(staffOnly, createStudent);
 
 router.route('/:id')
-  .get(staffOnly, getStudent)
+  .get(getStudent) // Allow any authenticated user to get student details
   .put(staffOnly, updateStudent)
   .delete(staffOnly, deleteStudent);
 

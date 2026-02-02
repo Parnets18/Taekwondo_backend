@@ -154,7 +154,7 @@ router.post('/verify', async (req, res) => {
 
 /**
  * GET /api/certificates/public
- * Get public certificates (for demo/testing)
+ * POST /api/certificates/pubor demo/testing)
  */
 router.get('/public', async (req, res) => {
   try {
@@ -703,6 +703,46 @@ router.get('/:id/download', async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Failed to download certificate'
+    });
+  }
+});
+
+/**
+ * GET /api/certificates/statistics
+ * Get certificate statistics (public endpoint for testing)
+ */
+router.get('/statistics', async (req, res) => {
+  try {
+    console.log('📊 Loading certificate statistics...');
+    
+    // Sample statistics for demo
+    const stats = {
+      totalCertificates: 156,
+      activeCertificates: 148,
+      revokedCertificates: 8,
+      byType: {
+        'Belt Promotion': 89,
+        'Tournament': 34,
+        'Course Completion': 21,
+        'Achievement': 12
+      },
+      byYear: {
+        '2023': 45,
+        '2024': 78,
+        '2025': 33
+      }
+    };
+
+    res.json({
+      status: 'success',
+      data: stats
+    });
+
+  } catch (error) {
+    console.error('Error fetching certificate statistics:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch certificate statistics'
     });
   }
 });

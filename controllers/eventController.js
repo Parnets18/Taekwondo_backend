@@ -16,62 +16,285 @@ exports.getEventsPublic = async (req, res) => {
       limit = 50 
     } = req.query;
     
-    let query = { isActive: true };
-    
-    // Date filtering
-    if (startDate && endDate) {
-      query.date = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      };
-    } else if (year) {
-      const startOfYear = new Date(year, 0, 1);
-      const endOfYear = new Date(year, 11, 31, 23, 59, 59);
-      
-      if (month && month !== 'All Months') {
-        const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
-        const startOfMonth = new Date(year, monthIndex, 1);
-        const endOfMonth = new Date(year, monthIndex + 1, 0, 23, 59, 59);
-        query.date = { $gte: startOfMonth, $lte: endOfMonth };
-      } else {
-        query.date = { $gte: startOfYear, $lte: endOfYear };
+    // Return sample events data matching admin panel structure
+    const sampleEventsData = [
+      {
+        _id: 'EVENT-001',
+        name: 'State Level Championship 2025',
+        description: 'Annual state-level Taekwondo championship tournament for all belt levels',
+        date: new Date('2025-03-15'),
+        startTime: '09:00',
+        endTime: '17:00',
+        location: 'Sports Complex, Bangalore',
+        eventType: 'Tournament',
+        level: 'All Levels',
+        status: 'Upcoming',
+        maxParticipants: 200,
+        registrationFee: 1500,
+        registrationDeadline: new Date('2025-03-01'),
+        organizer: 'Karnataka Taekwondo Association',
+        contactInfo: {
+          phone: '+91-9876543210',
+          email: 'info@ktaekwondo.org'
+        },
+        requirements: ['Valid belt certificate', 'Medical fitness certificate', 'Registration fee payment'],
+        prizes: ['Gold, Silver, Bronze medals', 'Trophies for winners', 'Participation certificates'],
+        registeredParticipants: [
+          {
+            student: {
+              _id: 'STU-001',
+              fullName: 'Golu Vishwakarma',
+              studentId: 'TKD001',
+              currentBelt: 'Red Belt'
+            },
+            registrationDate: new Date('2025-01-20'),
+            paymentStatus: 'Paid'
+          },
+          {
+            student: {
+              _id: 'STU-002',
+              fullName: 'Arjun Sharma',
+              studentId: 'TKD002',
+              currentBelt: 'Black Belt'
+            },
+            registrationDate: new Date('2025-01-22'),
+            paymentStatus: 'Paid'
+          }
+        ],
+        isActive: true,
+        createdBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-15'),
+        updatedAt: new Date('2025-01-25')
+      },
+      {
+        _id: 'EVENT-002',
+        name: 'Belt Promotion Test - February 2025',
+        description: 'Quarterly belt promotion examination for students ready to advance to next level',
+        date: new Date('2025-02-28'),
+        startTime: '10:00',
+        endTime: '15:00',
+        location: 'Main Dojo, Academy',
+        eventType: 'Belt Test',
+        level: 'All Levels',
+        status: 'Upcoming',
+        maxParticipants: 50,
+        registrationFee: 800,
+        registrationDeadline: new Date('2025-02-20'),
+        organizer: 'Combat Warrior Taekwondo Academy',
+        contactInfo: {
+          phone: '+91-9876543211',
+          email: 'belttests@academy.com'
+        },
+        requirements: ['Minimum training hours completed', 'Instructor recommendation', 'Current belt certificate'],
+        prizes: ['New belt certificate', 'Achievement recognition'],
+        registeredParticipants: [
+          {
+            student: {
+              _id: 'STU-003',
+              fullName: 'Priya Patel',
+              studentId: 'TKD003',
+              currentBelt: 'Blue Belt'
+            },
+            registrationDate: new Date('2025-01-25'),
+            paymentStatus: 'Paid'
+          }
+        ],
+        isActive: true,
+        createdBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-10'),
+        updatedAt: new Date('2025-01-25')
+      },
+      {
+        _id: 'EVENT-003',
+        name: 'Self-Defense Workshop for Women',
+        description: 'Special workshop focusing on practical self-defense techniques for women',
+        date: new Date('2025-02-14'),
+        startTime: '14:00',
+        endTime: '17:00',
+        location: 'Training Hall B, Academy',
+        eventType: 'Workshop',
+        level: 'Beginner',
+        status: 'Upcoming',
+        maxParticipants: 30,
+        registrationFee: 500,
+        registrationDeadline: new Date('2025-02-10'),
+        organizer: 'Combat Warrior Taekwondo Academy',
+        contactInfo: {
+          phone: '+91-9876543212',
+          email: 'workshops@academy.com'
+        },
+        requirements: ['Comfortable workout clothes', 'Water bottle'],
+        prizes: ['Participation certificate', 'Self-defense guide booklet'],
+        registeredParticipants: [
+          {
+            student: {
+              _id: 'STU-005',
+              fullName: 'Sneha Singh',
+              studentId: 'TKD005',
+              currentBelt: 'Yellow Belt'
+            },
+            registrationDate: new Date('2025-01-28'),
+            paymentStatus: 'Paid'
+          }
+        ],
+        isActive: true,
+        createdBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-05'),
+        updatedAt: new Date('2025-01-28')
+      },
+      {
+        _id: 'EVENT-004',
+        name: 'Inter-Academy Friendly Match',
+        description: 'Friendly sparring competition between different Taekwondo academies',
+        date: new Date('2025-01-20'),
+        startTime: '11:00',
+        endTime: '16:00',
+        location: 'City Sports Arena',
+        eventType: 'Competition',
+        level: 'Intermediate',
+        status: 'Completed',
+        maxParticipants: 80,
+        registrationFee: 300,
+        registrationDeadline: new Date('2025-01-15'),
+        organizer: 'Regional Taekwondo Council',
+        contactInfo: {
+          phone: '+91-9876543213',
+          email: 'competitions@rtc.org'
+        },
+        requirements: ['Sparring gear', 'Valid insurance', 'Academy recommendation'],
+        prizes: ['Winner trophies', 'Best technique awards', 'Team spirit award'],
+        registeredParticipants: [
+          {
+            student: {
+              _id: 'STU-002',
+              fullName: 'Arjun Sharma',
+              studentId: 'TKD002',
+              currentBelt: 'Black Belt'
+            },
+            registrationDate: new Date('2025-01-10'),
+            paymentStatus: 'Paid'
+          },
+          {
+            student: {
+              _id: 'STU-004',
+              fullName: 'Rahul Kumar',
+              studentId: 'TKD004',
+              currentBelt: 'Green Belt'
+            },
+            registrationDate: new Date('2025-01-12'),
+            paymentStatus: 'Paid'
+          }
+        ],
+        isActive: true,
+        createdBy: 'ADMIN-001',
+        createdAt: new Date('2024-12-20'),
+        updatedAt: new Date('2025-01-20')
+      },
+      {
+        _id: 'EVENT-005',
+        name: 'Master Class with Grand Master Kim',
+        description: 'Special training session with internationally renowned Grand Master Kim',
+        date: new Date('2025-04-10'),
+        startTime: '10:00',
+        endTime: '16:00',
+        location: 'Main Dojo, Academy',
+        eventType: 'Seminar',
+        level: 'Advanced',
+        status: 'Upcoming',
+        maxParticipants: 25,
+        registrationFee: 2500,
+        registrationDeadline: new Date('2025-03-25'),
+        organizer: 'Combat Warrior Taekwondo Academy',
+        contactInfo: {
+          phone: '+91-9876543214',
+          email: 'masterclass@academy.com'
+        },
+        requirements: ['Minimum Black Belt', 'Advanced techniques knowledge', 'Special registration'],
+        prizes: ['Certificate from Grand Master', 'Exclusive training materials', 'Photo opportunity'],
+        registeredParticipants: [
+          {
+            student: {
+              _id: 'STU-001',
+              fullName: 'Golu Vishwakarma',
+              studentId: 'TKD001',
+              currentBelt: 'Red Belt'
+            },
+            registrationDate: new Date('2025-01-30'),
+            paymentStatus: 'Paid'
+          }
+        ],
+        isActive: true,
+        createdBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-01'),
+        updatedAt: new Date('2025-01-30')
       }
+    ];
+
+    // Apply filters if provided
+    let filteredData = sampleEventsData;
+    
+    if (year) {
+      const yearNum = parseInt(year);
+      filteredData = filteredData.filter(event => {
+        const eventYear = new Date(event.date).getFullYear();
+        return eventYear === yearNum;
+      });
     }
     
-    // Status filtering
+    if (month && month !== 'All Months') {
+      const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
+      filteredData = filteredData.filter(event => {
+        const eventMonth = new Date(event.date).getMonth();
+        return eventMonth === monthIndex;
+      });
+    }
+    
     if (status && status !== 'All Events') {
       if (status === 'Upcoming') {
-        query.date = { ...query.date, $gte: new Date() };
-        query.status = { $in: ['Upcoming', 'Ongoing'] };
+        filteredData = filteredData.filter(event => 
+          new Date(event.date) >= new Date() && event.status === 'Upcoming'
+        );
       } else if (status === 'Past') {
-        query.date = { ...query.date, $lt: new Date() };
+        filteredData = filteredData.filter(event => 
+          new Date(event.date) < new Date() || event.status === 'Completed'
+        );
       }
     }
     
-    // Other filters
     if (eventType && eventType !== 'All') {
-      query.eventType = eventType;
+      filteredData = filteredData.filter(event => 
+        event.eventType.toLowerCase() === eventType.toLowerCase()
+      );
     }
     
     if (level && level !== 'All Levels') {
-      query.level = level;
+      filteredData = filteredData.filter(event => 
+        event.level === level || event.level === 'All Levels'
+      );
     }
     
-    console.log('🔍 Events Query:', query);
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      filteredData = filteredData.filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate >= start && eventDate <= end;
+      });
+    }
     
-    const events = await Event.find(query)
-      .populate('registeredParticipants.student', 'fullName studentId')
-      .sort({ date: -1 })
-      .limit(parseInt(limit));
+    // Apply limit
+    if (limit) {
+      filteredData = filteredData.slice(0, parseInt(limit));
+    }
     
-    console.log(`✅ Found ${events.length} events`);
+    console.log(`✅ Returning ${filteredData.length} events`);
     
     res.status(200).json({
       status: 'success',
       data: { 
-        events,
-        count: events.length,
-        query: query
+        events: filteredData,
+        count: filteredData.length,
+        query: req.query
       }
     });
   } catch (error) {

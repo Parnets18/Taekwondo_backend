@@ -161,6 +161,11 @@ certificateSchema.methods.revoke = function() {
   return this.save();
 };
 
+// Virtual for getting examiner name (for backward compatibility)
+certificateSchema.virtual('examiner').get(function() {
+  return this.achievementDetails?.examiner || this.metadata?.instructorName || 'Academy Director';
+});
+
 // Virtual for getting image URL
 certificateSchema.virtual('imageUrl').get(function() {
   if (this.filePath) {

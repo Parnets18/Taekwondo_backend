@@ -106,7 +106,280 @@ const validateObjectId = [
     .withMessage('Invalid fee ID format')
 ];
 
-// Public routes (none for fees - all require authentication)
+// Public routes (for testing/demo)
+router.get('/public', async (req, res) => {
+  try {
+    console.log('💰 Public fees route called');
+    
+    // Return sample fees data matching admin panel structure
+    const sampleFeesData = [
+      {
+        _id: 'FEE-001',
+        feeId: 'FEE2025001',
+        studentName: 'Golu Vishwakarma',
+        course: 'Advanced',
+        feeType: 'Monthly Fee',
+        amount: 3500,
+        dueDate: new Date('2025-02-01'),
+        status: 'Pending',
+        paymentMethod: null,
+        transactionId: null,
+        paidDate: null,
+        receiptNumber: null,
+        discount: {
+          amount: 0,
+          reason: null
+        },
+        lateFee: {
+          amount: 0,
+          appliedDate: null
+        },
+        paymentHistory: [],
+        notes: 'February 2025 monthly training fee',
+        createdBy: 'ADMIN-001',
+        updatedBy: null,
+        createdAt: new Date('2025-01-25'),
+        updatedAt: new Date('2025-01-25')
+      },
+      {
+        _id: 'FEE-002',
+        feeId: 'FEE2025002',
+        studentName: 'Arjun Sharma',
+        course: 'Expert',
+        feeType: 'Monthly Fee',
+        amount: 4000,
+        dueDate: new Date('2025-02-01'),
+        status: 'Paid',
+        paymentMethod: 'UPI',
+        transactionId: 'UPI123456789',
+        paidDate: new Date('2025-01-28'),
+        receiptNumber: 'RCP2025001',
+        discount: {
+          amount: 200,
+          reason: 'Early payment discount'
+        },
+        lateFee: {
+          amount: 0,
+          appliedDate: null
+        },
+        paymentHistory: [
+          {
+            amount: 3800,
+            paymentMethod: 'UPI',
+            transactionId: 'UPI123456789',
+            paidDate: new Date('2025-01-28'),
+            recordedBy: 'ADMIN-001'
+          }
+        ],
+        notes: 'February 2025 monthly training fee - Paid early',
+        createdBy: 'ADMIN-001',
+        updatedBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-25'),
+        updatedAt: new Date('2025-01-28')
+      },
+      {
+        _id: 'FEE-003',
+        feeId: 'FEE2025003',
+        studentName: 'Priya Patel',
+        course: 'Intermediate',
+        feeType: 'Belt Test Fee',
+        amount: 1200,
+        dueDate: new Date('2025-02-20'),
+        status: 'Paid',
+        paymentMethod: 'Cash',
+        transactionId: 'CASH20250130',
+        paidDate: new Date('2025-01-30'),
+        receiptNumber: 'RCP2025002',
+        discount: {
+          amount: 0,
+          reason: null
+        },
+        lateFee: {
+          amount: 0,
+          appliedDate: null
+        },
+        paymentHistory: [
+          {
+            amount: 1200,
+            paymentMethod: 'Cash',
+            transactionId: 'CASH20250130',
+            paidDate: new Date('2025-01-30'),
+            recordedBy: 'ADMIN-001'
+          }
+        ],
+        notes: 'Blue belt promotion test fee',
+        createdBy: 'ADMIN-001',
+        updatedBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-20'),
+        updatedAt: new Date('2025-01-30')
+      },
+      {
+        _id: 'FEE-004',
+        feeId: 'FEE2025004',
+        studentName: 'Rahul Kumar',
+        course: 'Intermediate',
+        feeType: 'Monthly Fee',
+        amount: 2800,
+        dueDate: new Date('2025-01-15'),
+        status: 'Overdue',
+        paymentMethod: null,
+        transactionId: null,
+        paidDate: null,
+        receiptNumber: null,
+        discount: {
+          amount: 0,
+          reason: null
+        },
+        lateFee: {
+          amount: 280,
+          appliedDate: new Date('2025-01-20')
+        },
+        paymentHistory: [],
+        notes: 'January 2025 monthly fee - Overdue with late fee applied',
+        createdBy: 'ADMIN-001',
+        updatedBy: 'ADMIN-001',
+        createdAt: new Date('2024-12-25'),
+        updatedAt: new Date('2025-01-20')
+      },
+      {
+        _id: 'FEE-005',
+        feeId: 'FEE2025005',
+        studentName: 'Sneha Singh',
+        course: 'Beginner',
+        feeType: 'Registration Fee',
+        amount: 1500,
+        dueDate: new Date('2025-01-10'),
+        status: 'Paid',
+        paymentMethod: 'Bank Transfer',
+        transactionId: 'NEFT987654321',
+        paidDate: new Date('2025-01-08'),
+        receiptNumber: 'RCP2025003',
+        discount: {
+          amount: 0,
+          reason: null
+        },
+        lateFee: {
+          amount: 0,
+          appliedDate: null
+        },
+        paymentHistory: [
+          {
+            amount: 1500,
+            paymentMethod: 'Bank Transfer',
+            transactionId: 'NEFT987654321',
+            paidDate: new Date('2025-01-08'),
+            recordedBy: 'ADMIN-001'
+          }
+        ],
+        notes: 'New student registration fee',
+        createdBy: 'ADMIN-001',
+        updatedBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-05'),
+        updatedAt: new Date('2025-01-08')
+      },
+      {
+        _id: 'FEE-006',
+        feeId: 'FEE2025006',
+        studentName: 'Golu Vishwakarma',
+        course: 'Advanced',
+        feeType: 'Equipment Fee',
+        amount: 2200,
+        dueDate: new Date('2025-02-10'),
+        status: 'Partial',
+        paymentMethod: 'UPI',
+        transactionId: 'UPI555666777',
+        paidDate: new Date('2025-01-29'),
+        receiptNumber: 'RCP2025004',
+        discount: {
+          amount: 0,
+          reason: null
+        },
+        lateFee: {
+          amount: 0,
+          appliedDate: null
+        },
+        paymentHistory: [
+          {
+            amount: 1000,
+            paymentMethod: 'UPI',
+            transactionId: 'UPI555666777',
+            paidDate: new Date('2025-01-29'),
+            recordedBy: 'ADMIN-001'
+          }
+        ],
+        notes: 'Sparring gear and uniform - Partial payment received',
+        createdBy: 'ADMIN-001',
+        updatedBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-15'),
+        updatedAt: new Date('2025-01-29')
+      }
+    ];
+
+    // Apply filters if provided
+    const { status, course, feeType, month, year, search } = req.query;
+    let filteredData = sampleFeesData;
+    
+    if (status && status !== 'all') {
+      filteredData = filteredData.filter(fee => 
+        fee.status.toLowerCase() === status.toLowerCase()
+      );
+    }
+    
+    if (course && course !== 'all') {
+      filteredData = filteredData.filter(fee => 
+        fee.course.toLowerCase() === course.toLowerCase()
+      );
+    }
+    
+    if (feeType && feeType !== 'all') {
+      filteredData = filteredData.filter(fee => 
+        fee.feeType.toLowerCase().includes(feeType.toLowerCase())
+      );
+    }
+    
+    if (month && year) {
+      const monthNum = parseInt(month);
+      const yearNum = parseInt(year);
+      filteredData = filteredData.filter(fee => {
+        const feeDate = new Date(fee.dueDate);
+        return feeDate.getMonth() + 1 === monthNum && feeDate.getFullYear() === yearNum;
+      });
+    } else if (year) {
+      const yearNum = parseInt(year);
+      filteredData = filteredData.filter(fee => {
+        const feeDate = new Date(fee.dueDate);
+        return feeDate.getFullYear() === yearNum;
+      });
+    }
+    
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredData = filteredData.filter(fee => 
+        fee.studentName.toLowerCase().includes(searchLower) ||
+        fee.feeId.toLowerCase().includes(searchLower) ||
+        (fee.transactionId && fee.transactionId.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    console.log(`✅ Returning ${filteredData.length} fee records`);
+    
+    res.status(200).json({
+      status: 'success',
+      data: { 
+        fees: filteredData,
+        count: filteredData.length,
+        query: req.query
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching public fees:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch fees',
+      error: error.message
+    });
+  }
+});
 
 // Protected routes - require authentication
 router.use(protect);

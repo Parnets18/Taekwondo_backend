@@ -271,7 +271,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/login', loginRoutes);
 
 
-// Health check endpoint
+// Health check endpoint - Support both GET and POST
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'success',
@@ -281,11 +281,98 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Public belt levels endpoint (no auth required)
+app.post('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Combat Warrior Institute API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV
+  });
+});
+
+// Public students endpoint (no auth required)
+app.post('/api/students/public', async (req, res) => {
+  try {
+    const Student = require('./models/Student');
+    console.log('🧪 Public students endpoint called (POST)');
+    
+    const students = await Student.find({ isActive: true }).limit(10);
+    console.log(`Found ${students.length} students in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${students.length} students`,
+      data: { 
+        students
+      }
+    });
+  } catch (error) {
+    console.error('Public students error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public students failed',
+      error: error.message
+    });
+  }
+});
+
+// Public certificates endpoint (no auth required)
+app.post('/api/certificates/public', async (req, res) => {
+  try {
+    const Certificate = require('./models/Certificate');
+    console.log('🧪 Public certificates endpoint called (POST)');
+    
+    const certificates = await Certificate.find({ status: 'Issued' }).limit(20);
+    console.log(`Found ${certificates.length} certificates in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${certificates.length} certificates`,
+      data: { 
+        certificates
+      }
+    });
+  } catch (error) {
+    console.error('Public certificates error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public certificates failed',
+      error: error.message
+    });
+  }
+});
+
+// Public attendance endpoint (no auth required)
+app.post('/api/attendance/public', async (req, res) => {
+  try {
+    const Attendance = require('./models/Attendance');
+    console.log('🧪 Public attendance endpoint called (POST)');
+    
+    const attendance = await Attendance.find({}).sort({ date: -1 }).limit(50);
+    console.log(`Found ${attendance.length} attendance records in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${attendance.length} attendance records`,
+      data: { 
+        attendance
+      }
+    });
+  } catch (error) {
+    console.error('Public attendance error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public attendance failed',
+      error: error.message
+    });
+  }
+});
+
+// Public belt levels endpoint (no auth required) - Support both GET and POST
 app.get('/api/belts-public', async (req, res) => {
   try {
     const Belt = require('./models/Belt');
-    console.log('🧪 Public belt levels endpoint called');
+    console.log('🧪 Public belt levels endpoint called (GET)');
     
     const belts = await Belt.find({ isActive: true }).sort({ level: 1 });
     console.log(`Found ${belts.length} belt levels in database`);
@@ -307,11 +394,36 @@ app.get('/api/belts-public', async (req, res) => {
   }
 });
 
-// Public promotions endpoint (no auth required)
+app.post('/api/belts-public', async (req, res) => {
+  try {
+    const Belt = require('./models/Belt');
+    console.log('🧪 Public belt levels endpoint called (POST)');
+    
+    const belts = await Belt.find({ isActive: true }).sort({ level: 1 });
+    console.log(`Found ${belts.length} belt levels in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${belts.length} belt levels`,
+      data: { 
+        belts
+      }
+    });
+  } catch (error) {
+    console.error('Public belt levels error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public belt levels failed',
+      error: error.message
+    });
+  }
+});
+
+// Public promotions endpoint (no auth required) - Support both GET and POST
 app.get('/api/promotions-public', async (req, res) => {
   try {
     const Promotion = require('./models/Promotion');
-    console.log('🧪 Public promotions endpoint called');
+    console.log('🧪 Public promotions endpoint called (GET)');
     
     const promotions = await Promotion.find({}).sort({ promotionDate: -1 }).limit(50);
     console.log(`Found ${promotions.length} promotions in database`);
@@ -333,11 +445,36 @@ app.get('/api/promotions-public', async (req, res) => {
   }
 });
 
-// Public belt tests endpoint (no auth required)
+app.post('/api/promotions-public', async (req, res) => {
+  try {
+    const Promotion = require('./models/Promotion');
+    console.log('🧪 Public promotions endpoint called (POST)');
+    
+    const promotions = await Promotion.find({}).sort({ promotionDate: -1 }).limit(50);
+    console.log(`Found ${promotions.length} promotions in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${promotions.length} promotions`,
+      data: { 
+        promotions
+      }
+    });
+  } catch (error) {
+    console.error('Public promotions error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public promotions failed',
+      error: error.message
+    });
+  }
+});
+
+// Public belt tests endpoint (no auth required) - Support both GET and POST
 app.get('/api/belt-tests-public', async (req, res) => {
   try {
     const BeltTest = require('./models/BeltTest');
-    console.log('🧪 Public belt tests endpoint called');
+    console.log('🧪 Public belt tests endpoint called (GET)');
     
     const upcomingTests = await BeltTest.find({ 
       testDate: { $gte: new Date() },
@@ -363,13 +500,98 @@ app.get('/api/belt-tests-public', async (req, res) => {
   }
 });
 
-// Public events endpoint (no auth required)
+app.post('/api/belt-tests-public', async (req, res) => {
+  try {
+    const BeltTest = require('./models/BeltTest');
+    console.log('🧪 Public belt tests endpoint called (POST)');
+    
+    const upcomingTests = await BeltTest.find({ 
+      testDate: { $gte: new Date() },
+      status: 'scheduled'
+    }).sort({ testDate: 1 }).limit(50);
+    
+    console.log(`Found ${upcomingTests.length} upcoming belt tests in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${upcomingTests.length} upcoming belt tests`,
+      data: { 
+        tests: upcomingTests
+      }
+    });
+  } catch (error) {
+    console.error('Public belt tests error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public belt tests failed',
+      error: error.message
+    });
+  }
+});
+
+// Public events endpoint (no auth required) - Support both GET and POST
 app.get('/api/events-public', async (req, res) => {
   try {
     const Event = require('./models/Event');
-    console.log('🧪 Public events endpoint called');
+    console.log('🧪 Public events endpoint called (GET)');
     
     const { year, month, status } = req.query;
+    let query = { isActive: true };
+    
+    // Date filtering
+    if (year) {
+      const startOfYear = new Date(year, 0, 1);
+      const endOfYear = new Date(year, 11, 31, 23, 59, 59);
+      
+      if (month && month !== 'All Months') {
+        const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
+        const startOfMonth = new Date(year, monthIndex, 1);
+        const endOfMonth = new Date(year, monthIndex + 1, 0, 23, 59, 59);
+        query.date = { $gte: startOfMonth, $lte: endOfMonth };
+      } else {
+        query.date = { $gte: startOfYear, $lte: endOfYear };
+      }
+    }
+    
+    // Status filtering
+    if (status && status !== 'All Events') {
+      if (status === 'Upcoming') {
+        query.date = { ...query.date, $gte: new Date() };
+      } else if (status === 'Past') {
+        query.date = { ...query.date, $lt: new Date() };
+      }
+    }
+    
+    console.log('🔍 Events Query:', query);
+    
+    const events = await Event.find(query).sort({ date: -1 }).limit(50);
+    console.log(`Found ${events.length} events in database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${events.length} events`,
+      data: { 
+        events,
+        count: events.length,
+        query: query
+      }
+    });
+  } catch (error) {
+    console.error('Public events error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Public events failed',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/events-public', async (req, res) => {
+  try {
+    const Event = require('./models/Event');
+    console.log('🧪 Public events endpoint called (POST)');
+    
+    const { year, month, status } = req.body;
     let query = { isActive: true };
     
     // Date filtering

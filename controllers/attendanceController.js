@@ -5,7 +5,7 @@ const Student = require('../models/Student');
 exports.getAttendancePublic = async (req, res) => {
   try {
     console.log('📊 Public attendance route called');
-    const { date, startDate, endDate, class: className, status, studentId } = req.query;
+    const { date, startDate, endDate, class: className, status, studentId } = req.query || req.body;
     
     let query = {};
     

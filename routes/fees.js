@@ -116,11 +116,51 @@ router.get('/public', async (req, res) => {
       {
         _id: 'FEE-001',
         feeId: 'FEE2025001',
-        studentName: 'Golu Vishwakarma',
+        studentName: 'Sarah Johnson',
         course: 'Advanced',
         feeType: 'Monthly Fee',
         amount: 3500,
+        paidAmount: 3500,
+        pendingAmount: 0,
         dueDate: new Date('2025-02-01'),
+        status: 'Paid',
+        paymentMethod: 'UPI',
+        transactionId: 'UPI123456789',
+        paidDate: new Date('2025-01-28'),
+        receiptNumber: 'RCP2025001',
+        discount: {
+          amount: 0,
+          reason: null
+        },
+        lateFee: {
+          amount: 0,
+          appliedDate: null
+        },
+        paymentHistory: [
+          {
+            amount: 3500,
+            paymentMethod: 'UPI',
+            transactionId: 'UPI123456789',
+            paidDate: new Date('2025-01-28'),
+            recordedBy: 'ADMIN-001'
+          }
+        ],
+        notes: 'February 2025 monthly training fee',
+        createdBy: 'ADMIN-001',
+        updatedBy: 'ADMIN-001',
+        createdAt: new Date('2025-01-25'),
+        updatedAt: new Date('2025-01-28')
+      },
+      {
+        _id: 'FEE-002',
+        feeId: 'FEE2025002',
+        studentName: 'John Smith',
+        course: 'Intermediate',
+        feeType: 'Belt Test Fee',
+        amount: 1800,
+        paidAmount: 0,
+        pendingAmount: 1800,
+        dueDate: new Date('2025-02-15'),
         status: 'Pending',
         paymentMethod: null,
         transactionId: null,
@@ -135,57 +175,23 @@ router.get('/public', async (req, res) => {
           appliedDate: null
         },
         paymentHistory: [],
-        notes: 'February 2025 monthly training fee',
+        notes: 'Blue belt promotion test fee',
         createdBy: 'ADMIN-001',
         updatedBy: null,
-        createdAt: new Date('2025-01-25'),
-        updatedAt: new Date('2025-01-25')
-      },
-      {
-        _id: 'FEE-002',
-        feeId: 'FEE2025002',
-        studentName: 'Arjun Sharma',
-        course: 'Expert',
-        feeType: 'Monthly Fee',
-        amount: 4000,
-        dueDate: new Date('2025-02-01'),
-        status: 'Paid',
-        paymentMethod: 'UPI',
-        transactionId: 'UPI123456789',
-        paidDate: new Date('2025-01-28'),
-        receiptNumber: 'RCP2025001',
-        discount: {
-          amount: 200,
-          reason: 'Early payment discount'
-        },
-        lateFee: {
-          amount: 0,
-          appliedDate: null
-        },
-        paymentHistory: [
-          {
-            amount: 3800,
-            paymentMethod: 'UPI',
-            transactionId: 'UPI123456789',
-            paidDate: new Date('2025-01-28'),
-            recordedBy: 'ADMIN-001'
-          }
-        ],
-        notes: 'February 2025 monthly training fee - Paid early',
-        createdBy: 'ADMIN-001',
-        updatedBy: 'ADMIN-001',
-        createdAt: new Date('2025-01-25'),
-        updatedAt: new Date('2025-01-28')
+        createdAt: new Date('2025-01-20'),
+        updatedAt: new Date('2025-01-20')
       },
       {
         _id: 'FEE-003',
         feeId: 'FEE2025003',
-        studentName: 'Priya Patel',
-        course: 'Intermediate',
-        feeType: 'Belt Test Fee',
-        amount: 1200,
-        dueDate: new Date('2025-02-20'),
-        status: 'Paid',
+        studentName: 'Golu Vishwakarma',
+        course: 'Advanced',
+        feeType: 'Equipment Fee',
+        amount: 3200,
+        paidAmount: 1600,
+        pendingAmount: 1600,
+        dueDate: new Date('2025-02-10'),
+        status: 'Partial',
         paymentMethod: 'Cash',
         transactionId: 'CASH20250130',
         paidDate: new Date('2025-01-30'),
@@ -200,27 +206,29 @@ router.get('/public', async (req, res) => {
         },
         paymentHistory: [
           {
-            amount: 1200,
+            amount: 1600,
             paymentMethod: 'Cash',
             transactionId: 'CASH20250130',
             paidDate: new Date('2025-01-30'),
             recordedBy: 'ADMIN-001'
           }
         ],
-        notes: 'Blue belt promotion test fee',
+        notes: 'Sparring gear and uniform - Partial payment received',
         createdBy: 'ADMIN-001',
         updatedBy: 'ADMIN-001',
-        createdAt: new Date('2025-01-20'),
+        createdAt: new Date('2025-01-15'),
         updatedAt: new Date('2025-01-30')
       },
       {
         _id: 'FEE-004',
         feeId: 'FEE2025004',
-        studentName: 'Rahul Kumar',
-        course: 'Intermediate',
-        feeType: 'Monthly Fee',
-        amount: 2800,
-        dueDate: new Date('2025-01-15'),
+        studentName: 'Arjun Sharma M',
+        course: 'Expert',
+        feeType: 'Competition Fee',
+        amount: 2200,
+        paidAmount: 0,
+        pendingAmount: 2200,
+        dueDate: new Date('2025-01-31'),
         status: 'Overdue',
         paymentMethod: null,
         transactionId: null,
@@ -231,87 +239,15 @@ router.get('/public', async (req, res) => {
           reason: null
         },
         lateFee: {
-          amount: 280,
-          appliedDate: new Date('2025-01-20')
+          amount: 220,
+          appliedDate: new Date('2025-02-01')
         },
         paymentHistory: [],
-        notes: 'January 2025 monthly fee - Overdue with late fee applied',
+        notes: 'State championship registration fee - Overdue',
         createdBy: 'ADMIN-001',
         updatedBy: 'ADMIN-001',
-        createdAt: new Date('2024-12-25'),
-        updatedAt: new Date('2025-01-20')
-      },
-      {
-        _id: 'FEE-005',
-        feeId: 'FEE2025005',
-        studentName: 'Sneha Singh',
-        course: 'Beginner',
-        feeType: 'Registration Fee',
-        amount: 1500,
-        dueDate: new Date('2025-01-10'),
-        status: 'Paid',
-        paymentMethod: 'Bank Transfer',
-        transactionId: 'NEFT987654321',
-        paidDate: new Date('2025-01-08'),
-        receiptNumber: 'RCP2025003',
-        discount: {
-          amount: 0,
-          reason: null
-        },
-        lateFee: {
-          amount: 0,
-          appliedDate: null
-        },
-        paymentHistory: [
-          {
-            amount: 1500,
-            paymentMethod: 'Bank Transfer',
-            transactionId: 'NEFT987654321',
-            paidDate: new Date('2025-01-08'),
-            recordedBy: 'ADMIN-001'
-          }
-        ],
-        notes: 'New student registration fee',
-        createdBy: 'ADMIN-001',
-        updatedBy: 'ADMIN-001',
-        createdAt: new Date('2025-01-05'),
-        updatedAt: new Date('2025-01-08')
-      },
-      {
-        _id: 'FEE-006',
-        feeId: 'FEE2025006',
-        studentName: 'Golu Vishwakarma',
-        course: 'Advanced',
-        feeType: 'Equipment Fee',
-        amount: 2200,
-        dueDate: new Date('2025-02-10'),
-        status: 'Partial',
-        paymentMethod: 'UPI',
-        transactionId: 'UPI555666777',
-        paidDate: new Date('2025-01-29'),
-        receiptNumber: 'RCP2025004',
-        discount: {
-          amount: 0,
-          reason: null
-        },
-        lateFee: {
-          amount: 0,
-          appliedDate: null
-        },
-        paymentHistory: [
-          {
-            amount: 1000,
-            paymentMethod: 'UPI',
-            transactionId: 'UPI555666777',
-            paidDate: new Date('2025-01-29'),
-            recordedBy: 'ADMIN-001'
-          }
-        ],
-        notes: 'Sparring gear and uniform - Partial payment received',
-        createdBy: 'ADMIN-001',
-        updatedBy: 'ADMIN-001',
-        createdAt: new Date('2025-01-15'),
-        updatedAt: new Date('2025-01-29')
+        createdAt: new Date('2025-01-01'),
+        updatedAt: new Date('2025-02-01')
       }
     ];
 

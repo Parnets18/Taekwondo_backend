@@ -106,15 +106,81 @@ const validateObjectId = [
     .withMessage('Invalid fee ID format')
 ];
 
-// Public routes (for testing/demo)
+// Public routes (for testing/demo) - MUST be before protect middleware
 router.get('/public', async (req, res) => {
   try {
     console.log('💰 Public fees route called');
+    console.log('💰 Query params:', req.query);
     
-    // Return sample fees data matching admin panel structure
+    // Try to fetch from database first
+    const Fee = require('../models/Fee');
+    
+    try {
+      const { status, course, feeType, month, year, search, limit } = req.query;
+      const filter = {};
+      
+      // Apply filters
+      if (status && status !== 'all') {
+        filter.status = status;
+      }
+      
+      if (course && course !== 'all') {
+        filter.course = course;
+      }
+      
+      if (feeType && feeType !== 'all') {
+        filter.feeType = feeType;
+      }
+      
+      if (month && year) {
+        const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const endDate = new Date(parseInt(year), parseInt(month), 0);
+        filter.dueDate = { $gte: startDate, $lte: endDate };
+      } else if (year) {
+        const startDate = new Date(parseInt(year), 0, 1);
+        const endDate = new Date(parseInt(year), 11, 31);
+        filter.dueDate = { $gte: startDate, $lte: endDate };
+      }
+      
+      if (search) {
+        filter.$or = [
+          { studentName: { $regex: search, $options: 'i' } },
+          { feeId: { $regex: search, $options: 'i' } },
+          { transactionId: { $regex: search, $options: 'i' } }
+        ];
+      }
+      
+      console.log('💰 Database filter:', filter);
+      
+      // Fetch from database
+      const dbFees = await Fee.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(parseInt(limit) || 100);
+      
+      console.log(`✅ Found ${dbFees.length} fees in database`);
+      
+      // If database has data, return it
+      if (dbFees.length > 0) {
+        return res.status(200).json({
+          status: 'success',
+          data: { 
+            fees: dbFees,
+            count: dbFees.length,
+            source: 'database',
+            query: req.query
+          }
+        });
+      }
+      
+      console.log('⚠️ No fees found in database, using sample data...');
+    } catch (dbError) {
+      console.log('⚠️ Database query failed, using sample data:', dbError.message);
+    }
+    
+    // Fallback to sample data if database is empty or fails
     const sampleFeesData = [
       {
-        _id: 'FEE-001',
+        _id: 'FEE-SAMPLE-001',
         feeId: 'FEE2025001',
         studentName: 'Sarah Johnson',
         course: 'Advanced',
@@ -128,31 +194,22 @@ router.get('/public', async (req, res) => {
         transactionId: 'UPI123456789',
         paidDate: new Date('2025-01-28'),
         receiptNumber: 'RCP2025001',
-        discount: {
-          amount: 0,
-          reason: null
-        },
-        lateFee: {
-          amount: 0,
-          appliedDate: null
-        },
-        paymentHistory: [
-          {
-            amount: 3500,
-            paymentMethod: 'UPI',
-            transactionId: 'UPI123456789',
-            paidDate: new Date('2025-01-28'),
-            recordedBy: 'ADMIN-001'
-          }
-        ],
+        discount: { amount: 0, reason: null },
+        lateFee: { amount: 0, appliedDate: null },
+        paymentHistory: [{
+          amount: 3500,
+          paymentMethod: 'UPI',
+          transactionId: 'UPI123456789',
+          paidDate: new Date('2025-01-28'),
+          recordedBy: 'ADMIN-001'
+        }],
         notes: 'February 2025 monthly training fee',
         createdBy: 'ADMIN-001',
-        updatedBy: 'ADMIN-001',
         createdAt: new Date('2025-01-25'),
         updatedAt: new Date('2025-01-28')
       },
       {
-        _id: 'FEE-002',
+        _id: 'FEE-SAMPLE-002',
         feeId: 'FEE2025002',
         studentName: 'John Smith',
         course: 'Intermediate',
@@ -166,23 +223,16 @@ router.get('/public', async (req, res) => {
         transactionId: null,
         paidDate: null,
         receiptNumber: null,
-        discount: {
-          amount: 0,
-          reason: null
-        },
-        lateFee: {
-          amount: 0,
-          appliedDate: null
-        },
+        discount: { amount: 0, reason: null },
+        lateFee: { amount: 0, appliedDate: null },
         paymentHistory: [],
         notes: 'Blue belt promotion test fee',
         createdBy: 'ADMIN-001',
-        updatedBy: null,
         createdAt: new Date('2025-01-20'),
         updatedAt: new Date('2025-01-20')
       },
       {
-        _id: 'FEE-003',
+        _id: 'FEE-SAMPLE-003',
         feeId: 'FEE2025003',
         studentName: 'Golu Vishwakarma',
         course: 'Advanced',
@@ -196,31 +246,22 @@ router.get('/public', async (req, res) => {
         transactionId: 'CASH20250130',
         paidDate: new Date('2025-01-30'),
         receiptNumber: 'RCP2025002',
-        discount: {
-          amount: 0,
-          reason: null
-        },
-        lateFee: {
-          amount: 0,
-          appliedDate: null
-        },
-        paymentHistory: [
-          {
-            amount: 1600,
-            paymentMethod: 'Cash',
-            transactionId: 'CASH20250130',
-            paidDate: new Date('2025-01-30'),
-            recordedBy: 'ADMIN-001'
-          }
-        ],
+        discount: { amount: 0, reason: null },
+        lateFee: { amount: 0, appliedDate: null },
+        paymentHistory: [{
+          amount: 1600,
+          paymentMethod: 'Cash',
+          transactionId: 'CASH20250130',
+          paidDate: new Date('2025-01-30'),
+          recordedBy: 'ADMIN-001'
+        }],
         notes: 'Sparring gear and uniform - Partial payment received',
         createdBy: 'ADMIN-001',
-        updatedBy: 'ADMIN-001',
         createdAt: new Date('2025-01-15'),
         updatedAt: new Date('2025-01-30')
       },
       {
-        _id: 'FEE-004',
+        _id: 'FEE-SAMPLE-004',
         feeId: 'FEE2025004',
         studentName: 'Arjun Sharma M',
         course: 'Expert',
@@ -234,76 +275,24 @@ router.get('/public', async (req, res) => {
         transactionId: null,
         paidDate: null,
         receiptNumber: null,
-        discount: {
-          amount: 0,
-          reason: null
-        },
-        lateFee: {
-          amount: 220,
-          appliedDate: new Date('2025-02-01')
-        },
+        discount: { amount: 0, reason: null },
+        lateFee: { amount: 220, appliedDate: new Date('2025-02-01') },
         paymentHistory: [],
         notes: 'State championship registration fee - Overdue',
         createdBy: 'ADMIN-001',
-        updatedBy: 'ADMIN-001',
         createdAt: new Date('2025-01-01'),
         updatedAt: new Date('2025-02-01')
       }
     ];
-
-    // Apply filters if provided
-    const { status, course, feeType, month, year, search } = req.query;
-    let filteredData = sampleFeesData;
     
-    if (status && status !== 'all') {
-      filteredData = filteredData.filter(fee => 
-        fee.status.toLowerCase() === status.toLowerCase()
-      );
-    }
-    
-    if (course && course !== 'all') {
-      filteredData = filteredData.filter(fee => 
-        fee.course.toLowerCase() === course.toLowerCase()
-      );
-    }
-    
-    if (feeType && feeType !== 'all') {
-      filteredData = filteredData.filter(fee => 
-        fee.feeType.toLowerCase().includes(feeType.toLowerCase())
-      );
-    }
-    
-    if (month && year) {
-      const monthNum = parseInt(month);
-      const yearNum = parseInt(year);
-      filteredData = filteredData.filter(fee => {
-        const feeDate = new Date(fee.dueDate);
-        return feeDate.getMonth() + 1 === monthNum && feeDate.getFullYear() === yearNum;
-      });
-    } else if (year) {
-      const yearNum = parseInt(year);
-      filteredData = filteredData.filter(fee => {
-        const feeDate = new Date(fee.dueDate);
-        return feeDate.getFullYear() === yearNum;
-      });
-    }
-    
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredData = filteredData.filter(fee => 
-        fee.studentName.toLowerCase().includes(searchLower) ||
-        fee.feeId.toLowerCase().includes(searchLower) ||
-        (fee.transactionId && fee.transactionId.toLowerCase().includes(searchLower))
-      );
-    }
-    
-    console.log(`✅ Returning ${filteredData.length} fee records`);
+    console.log(`✅ Returning ${sampleFeesData.length} sample fee records`);
     
     res.status(200).json({
       status: 'success',
       data: { 
-        fees: filteredData,
-        count: filteredData.length,
+        fees: sampleFeesData,
+        count: sampleFeesData.length,
+        source: 'sample',
         query: req.query
       }
     });

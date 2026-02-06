@@ -20,8 +20,61 @@ console.log('📝 Belt Tests routes configured');
 router.get('/public', async (req, res) => {
   try {
     console.log('📝 Public belt tests route called');
+    console.log('📝 Query params:', req.query);
     
-    // Return sample belt tests data
+    // Try to fetch from database first
+    const BeltTest = require('../../models/BeltTest');
+    
+    try {
+      const { status, upcoming, studentName, testingFor } = req.query;
+      const filter = {};
+      
+      // Apply filters
+      if (status && status !== 'all') {
+        filter.status = status.toLowerCase();
+      }
+      
+      if (upcoming === 'true') {
+        filter.testDate = { $gte: new Date() };
+        filter.status = 'scheduled';
+      }
+      
+      if (studentName) {
+        filter.studentName = { $regex: studentName, $options: 'i' };
+      }
+      
+      if (testingFor) {
+        filter.testingFor = { $regex: testingFor, $options: 'i' };
+      }
+      
+      console.log('📝 Database filter:', filter);
+      
+      // Fetch from database
+      const dbTests = await BeltTest.find(filter)
+        .sort({ testDate: 1 })
+        .limit(50);
+      
+      console.log(`✅ Found ${dbTests.length} belt tests in database`);
+      
+      // If database has data, return it
+      if (dbTests.length > 0) {
+        return res.status(200).json({
+          status: 'success',
+          data: { 
+            tests: dbTests,
+            count: dbTests.length,
+            source: 'database',
+            query: req.query
+          }
+        });
+      }
+      
+      console.log('⚠️ No tests found in database, using sample data...');
+    } catch (dbError) {
+      console.log('⚠️ Database query failed, using sample data:', dbError.message);
+    }
+    
+    // Fallback to sample data if database is empty or fails
     const sampleBeltTestsData = [
       {
         _id: 'TEST-001',
@@ -44,6 +97,7 @@ router.get('/public', async (req, res) => {
         testingFee: 3000,
         paymentStatus: 'Paid',
         notes: 'Exceptional student ready for black belt',
+        readiness: 95,
         results: null,
         score: null,
         passed: null,
@@ -73,6 +127,7 @@ router.get('/public', async (req, res) => {
         testingFee: 1800,
         paymentStatus: 'Paid',
         notes: 'Strong technical skills, good leadership potential',
+        readiness: 88,
         results: null,
         score: null,
         passed: null,
@@ -102,6 +157,7 @@ router.get('/public', async (req, res) => {
         testingFee: 1600,
         paymentStatus: 'Pending',
         notes: 'Needs to improve consistency in forms',
+        readiness: 75,
         results: null,
         score: null,
         passed: null,
@@ -182,7 +238,7 @@ router.get('/public', async (req, res) => {
       }
     ];
 
-    // Apply filters if provided
+    // Apply filters to sample data
     const { status, upcoming, studentName, testingFor } = req.query;
     let filteredData = sampleBeltTestsData;
     
@@ -210,13 +266,14 @@ router.get('/public', async (req, res) => {
       );
     }
     
-    console.log(`✅ Returning ${filteredData.length} belt tests`);
+    console.log(`✅ Returning ${filteredData.length} belt tests (sample data)`);
     
     res.status(200).json({
       status: 'success',
       data: { 
         tests: filteredData,
         count: filteredData.length,
+        source: 'sample',
         query: req.query
       }
     });
@@ -234,8 +291,60 @@ router.get('/public', async (req, res) => {
 router.get('/promotions-public', async (req, res) => {
   try {
     console.log('🏆 Public promotions route called');
+    console.log('🏆 Query params:', req.query);
     
-    // Return sample promotions data
+    // Try to fetch from database first
+    const Promotion = require('../../models/Promotion');
+    
+    try {
+      const { status, studentName, fromBelt, toBelt } = req.query;
+      const filter = {};
+      
+      // Apply filters
+      if (status && status !== 'all') {
+        filter.status = status.toLowerCase();
+      }
+      
+      if (studentName) {
+        filter.studentName = { $regex: studentName, $options: 'i' };
+      }
+      
+      if (fromBelt) {
+        filter.fromBelt = { $regex: fromBelt, $options: 'i' };
+      }
+      
+      if (toBelt) {
+        filter.toBelt = { $regex: toBelt, $options: 'i' };
+      }
+      
+      console.log('🏆 Database filter:', filter);
+      
+      // Fetch from database
+      const dbPromotions = await Promotion.find(filter)
+        .sort({ promotionDate: -1 })
+        .limit(50);
+      
+      console.log(`✅ Found ${dbPromotions.length} promotions in database`);
+      
+      // If database has data, return it
+      if (dbPromotions.length > 0) {
+        return res.status(200).json({
+          status: 'success',
+          data: { 
+            promotions: dbPromotions,
+            count: dbPromotions.length,
+            source: 'database',
+            query: req.query
+          }
+        });
+      }
+      
+      console.log('⚠️ No promotions found in database, using sample data...');
+    } catch (dbError) {
+      console.log('⚠️ Database query failed, using sample data:', dbError.message);
+    }
+    
+    // Fallback to sample data if database is empty or fails
     const samplePromotionsData = [
       {
         _id: 'PROMO-001',
@@ -314,7 +423,7 @@ router.get('/promotions-public', async (req, res) => {
       }
     ];
 
-    // Apply filters if provided
+    // Apply filters to sample data
     const { status, studentName, fromBelt, toBelt } = req.query;
     let filteredData = samplePromotionsData;
     
@@ -342,13 +451,14 @@ router.get('/promotions-public', async (req, res) => {
       );
     }
     
-    console.log(`✅ Returning ${filteredData.length} promotions`);
+    console.log(`✅ Returning ${filteredData.length} promotions (sample data)`);
     
     res.status(200).json({
       status: 'success',
       data: { 
         promotions: filteredData,
         count: filteredData.length,
+        source: 'sample',
         query: req.query
       }
     });

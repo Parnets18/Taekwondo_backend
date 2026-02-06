@@ -245,6 +245,45 @@ app.get('/api/test-simple', (req, res) => {
   res.json({ status: 'success', message: 'Simple test working' });
 });
 
+// ============================================================================
+// DIRECT PUBLIC FEES ENDPOINT - ABSOLUTELY NO AUTH - PLACED BEFORE ALL ROUTES
+// ============================================================================
+app.get('/api/fees/public', async (req, res) => {
+  try {
+    console.log('💰💰💰 DIRECT PUBLIC FEES ENDPOINT HIT (server.js) - NO AUTH 💰💰💰');
+    const Fee = require('./models/Fee');
+    
+    const fees = await Fee.find({}).sort({ createdAt: -1 }).limit(100);
+    console.log(`📦 Found ${fees.length} fees in database`);
+    
+    const transformedData = fees.map(fee => {
+      const feeObj = fee.toObject();
+      return {
+        ...feeObj,
+        paidAmount: feeObj.totalPaidAmount || 0,
+        pendingAmount: Math.max(0, (feeObj.amount || 0) - (feeObj.totalPaidAmount || 0))
+      };
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      success: true,
+      data: transformedData,
+      count: transformedData.length,
+      source: 'database',
+      message: 'Public fees fetched from server.js - NO AUTH'
+    });
+  } catch (error) {
+    console.error('❌ Error in direct public fees endpoint:', error);
+    res.status(500).json({
+      status: 'error',
+      success: false,
+      message: 'Failed to fetch public fees',
+      error: error.message
+    });
+  }
+});
+
 // Routes
 console.log('🔐 Loading auth routes...');
 try {

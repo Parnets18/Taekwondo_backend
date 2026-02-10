@@ -10,6 +10,8 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const admissionRoutes = require('./routes/admissions');
 const adminAdmissionRoutes = require('./routes/admin/admissions');
+const beltExamRoutes = require('./routes/beltExams');
+const adminBeltExamRoutes = require('./routes/admin/beltExams');
 const contactRoutes = require('./routes/contact');
 const adminRoutes = require('./routes/admin');
 const studentRoutes = require('./routes/students');
@@ -35,8 +37,11 @@ app.get('/api/simple-test', (req, res) => {
   res.json({ status: 'success', message: 'Simple test route working' });
 });
 
-// Security middleware
-app.use(helmet());
+// Security middleware - Configure helmet to allow images
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 app.use(compression());
 
 // CORS configuration - Allow all origins for development
@@ -294,6 +299,8 @@ try {
 }
 app.use('/api/admissions', admissionRoutes);
 app.use('/api/admin/admissions', adminAdmissionRoutes);
+app.use('/api/belt-exams', beltExamRoutes);
+app.use('/api/admin/belt-exams', adminBeltExamRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/students', studentRoutes);

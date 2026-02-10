@@ -2,136 +2,90 @@ const mongoose = require('mongoose');
 
 const admissionSchema = new mongoose.Schema({
   // Personal Information
-  fullName: {
+  name: {
     type: String,
-    required: [true, 'Full name is required'],
+    required: [true, 'Name is required'],
     trim: true,
+    uppercase: true,
     maxlength: [100, 'Name cannot exceed 100 characters']
   },
   dateOfBirth: {
     type: Date,
     required: [true, 'Date of birth is required']
   },
+  age: {
+    type: String,
+    trim: true
+  },
   gender: {
     type: String,
     required: [true, 'Gender is required'],
-    enum: ['male', 'female', 'other']
+    enum: ['Male', 'Female', 'Other']
   },
-  phone: {
+  fatherName: {
     type: String,
-    required: [true, 'Phone number is required'],
-    match: [/^[+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number']
+    required: [true, 'Father name is required'],
+    trim: true,
+    maxlength: [100, 'Name cannot exceed 100 characters']
   },
-  
-  // Contact Information
+  motherName: {
+    type: String,
+    required: [true, 'Mother name is required'],
+    trim: true,
+    maxlength: [100, 'Name cannot exceed 100 characters']
+  },
+  residentialAddress: {
+    type: String,
+    required: [true, 'Residential address is required'],
+    maxlength: [500, 'Address cannot exceed 500 characters']
+  },
+  mobileNumber: {
+    type: String,
+    required: [true, 'Mobile number is required'],
+    match: [/^[+]?[1-9][\d]{9,14}$/, 'Please enter a valid phone number']
+  },
+  emergencyContact: {
+    type: String,
+    trim: true
+  },
   email: {
     type: String,
     required: [true, 'Email is required'],
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
-  address: {
+  aadhaarNumber: {
     type: String,
-    required: [true, 'Address is required'],
-    maxlength: [500, 'Address cannot exceed 500 characters']
-  },
-  city: {
-    type: String,
-    trim: true
-  },
-  state: {
-    type: String,
-    trim: true
-  },
-  pincode: {
-    type: String,
-    trim: true
-  },
-  nationality: {
-    type: String,
-    default: 'Indian'
-  },
-  
-  // Course Selection
-  courseLevel: {
-    type: String,
-    required: [true, 'Course level is required'],
-    enum: ['beginner', 'intermediate', 'advanced', 'black-belt']
-  },
-  preferredSchedule: {
-    type: String,
-    enum: ['morning', 'evening', 'weekend', 'flexible'],
-    default: 'evening'
-  },
-  trainingGoals: {
-    type: String
-  },
-  previousMartialArts: {
-    type: String
-  },
-  fitnessLevel: {
-    type: String
-  },
-  
-  // Emergency Contact
-  emergencyContactName: {
-    type: String,
-    required: [true, 'Emergency contact name is required'],
     trim: true,
-    maxlength: [100, 'Name cannot exceed 100 characters']
+    maxlength: [12, 'Aadhaar number must be 12 digits']
   },
-  emergencyContactPhone: {
+  bloodGroup: {
     type: String,
-    required: [true, 'Emergency contact phone is required'],
-    match: [/^[+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number']
-  },
-  relationshipToStudent: {
-    type: String,
-    required: [true, 'Relationship to student is required'],
-    enum: ['parent', 'guardian', 'sibling', 'spouse', 'grandparent', 'other', 'friend']
-  },
-  emergencyContactAddress: {
-    type: String,
-    maxlength: [500, 'Address cannot exceed 500 characters']
-  },
-  
-  // Parent/Guardian Information (for minors)
-  parentGuardianName: {
-    type: String,
-    trim: true
-  },
-  parentGuardianPhone: {
-    type: String,
-    trim: true
-  },
-  
-  // Medical Information
-  medicalConditions: {
-    type: String,
-    maxlength: [1000, 'Medical conditions cannot exceed 1000 characters'],
+    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', ''],
     default: ''
   },
-  
-  // Additional Information
-  howDidYouHear: {
-    type: String
+  height: {
+    type: Number,
+    min: [0, 'Height must be positive']
   },
-  specialRequests: {
+  weight: {
+    type: Number,
+    min: [0, 'Weight must be positive']
+  },
+  physicalDisorder: {
     type: String,
-    maxlength: [1000, 'Special requests cannot exceed 1000 characters']
+    maxlength: [500, 'Physical disorder description cannot exceed 500 characters'],
+    default: ''
+  },
+  photo: {
+    type: String,
+    default: ''
   },
   
   // Agreements
   agreeToTerms: {
     type: Boolean,
-    default: false
-  },
-  agreeToPhotos: {
-    type: Boolean,
-    default: false
-  },
-  agreeToEmails: {
-    type: Boolean,
+    required: [true, 'You must agree to terms and conditions'],
     default: false
   },
   
@@ -191,8 +145,8 @@ admissionSchema.methods.generateStudentId = function() {
   return this.studentId;
 };
 
-// Calculate age
-admissionSchema.virtual('age').get(function() {
+// Calculate age from date of birth
+admissionSchema.virtual('calculatedAge').get(function() {
   if (!this.dateOfBirth) return null;
   const today = new Date();
   const birthDate = new Date(this.dateOfBirth);

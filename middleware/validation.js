@@ -54,49 +54,73 @@ const validateUserLogin = [
 
 // Admission form validation
 const validateAdmission = [
-  body('fullName')
+  body('name')
     .trim()
     .isLength({ min: 2, max: 100 })
-    .withMessage('Full name must be between 2 and 100 characters'),
+    .withMessage('Name must be between 2 and 100 characters'),
   
   body('dateOfBirth')
     .isISO8601()
     .withMessage('Please provide a valid date of birth'),
   
   body('gender')
-    .isIn(['male', 'female', 'other'])
-    .withMessage('Gender must be male, female, or other'),
+    .isIn(['Male', 'Female', 'Other'])
+    .withMessage('Gender must be Male, Female, or Other'),
   
-  body('phone')
+  body('fatherName')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Father name must be between 2 and 100 characters'),
+  
+  body('motherName')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Mother name must be between 2 and 100 characters'),
+  
+  body('residentialAddress')
+    .trim()
+    .isLength({ min: 5, max: 500 })
+    .withMessage('Residential address must be between 5 and 500 characters'),
+  
+  body('mobileNumber')
     .matches(/^[+]?[1-9][\d\s\-\(\)]{9,15}$/)
-    .withMessage('Please provide a valid phone number'),
+    .withMessage('Please provide a valid mobile number'),
+  
+  body('emergencyContact')
+    .optional({ checkFalsy: true })
+    .matches(/^[+]?[1-9][\d\s\-\(\)]{9,15}$/)
+    .withMessage('Please provide a valid emergency contact number'),
   
   body('email')
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email'),
   
-  body('address')
+  body('aadhaarNumber')
+    .optional({ checkFalsy: true })
+    .matches(/^\d{12}$/)
+    .withMessage('Aadhaar number must be 12 digits'),
+  
+  body('bloodGroup')
+    .optional({ checkFalsy: true })
+    .isIn(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])
+    .withMessage('Please provide a valid blood group'),
+  
+  body('height')
+    .optional({ checkFalsy: true })
+    .isFloat({ min: 0 })
+    .withMessage('Height must be a positive number'),
+  
+  body('weight')
+    .optional({ checkFalsy: true })
+    .isFloat({ min: 0 })
+    .withMessage('Weight must be a positive number'),
+  
+  body('physicalDisorder')
+    .optional({ checkFalsy: true })
     .trim()
-    .isLength({ min: 5, max: 500 })
-    .withMessage('Address must be between 5 and 500 characters'),
-  
-  body('courseLevel')
-    .isIn(['beginner', 'intermediate', 'advanced', 'black-belt'])
-    .withMessage('Course level must be beginner, intermediate, advanced, or black-belt'),
-  
-  body('emergencyContactName')
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Emergency contact name must be between 2 and 100 characters'),
-  
-  body('emergencyContactPhone')
-    .matches(/^[+]?[1-9][\d\s\-\(\)]{9,15}$/)
-    .withMessage('Please provide a valid emergency contact phone number'),
-  
-  body('relationshipToStudent')
-    .isIn(['parent', 'guardian', 'sibling', 'spouse', 'grandparent', 'other', 'friend'])
-    .withMessage('Please select a valid relationship'),
+    .isLength({ max: 500 })
+    .withMessage('Physical disorder description must not exceed 500 characters'),
   
   handleValidationErrors
 ];
@@ -181,11 +205,89 @@ const validateCourse = [
   handleValidationErrors
 ];
 
+// Belt exam validation
+const validateBeltExam = [
+  body('candidateName')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Candidate name must be between 2 and 100 characters'),
+  
+  body('dateOfBirth')
+    .isISO8601()
+    .withMessage('Please provide a valid date of birth'),
+  
+  body('gender')
+    .isIn(['Male', 'Female', 'Other'])
+    .withMessage('Gender must be Male, Female, or Other'),
+  
+  body('parentGuardianName')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Parent/Guardian name must be between 2 and 100 characters'),
+  
+  body('address')
+    .trim()
+    .isLength({ min: 5, max: 500 })
+    .withMessage('Address must be between 5 and 500 characters'),
+  
+  body('phoneNumber')
+    .matches(/^[+]?[1-9][\d\s\-\(\)]{9,15}$/)
+    .withMessage('Please provide a valid phone number'),
+  
+  body('district')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('District must not exceed 100 characters'),
+  
+  body('state')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('State must not exceed 100 characters'),
+  
+  body('gmail')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  
+  body('appearingForGrade')
+    .trim()
+    .notEmpty()
+    .withMessage('Appearing grade is required'),
+  
+  body('presentBelt')
+    .trim()
+    .notEmpty()
+    .withMessage('Present belt is required'),
+  
+  body('schoolName')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('School name must not exceed 200 characters'),
+  
+  body('academicQualification')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('Academic qualification must not exceed 200 characters'),
+  
+  body('instructorName')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Instructor name must not exceed 100 characters'),
+  
+  handleValidationErrors
+];
+
 module.exports = {
   validateUserRegistration,
   validateUserLogin,
   validateAdmission,
   validateContact,
   validateCourse,
+  validateBeltExam,
   handleValidationErrors
 };

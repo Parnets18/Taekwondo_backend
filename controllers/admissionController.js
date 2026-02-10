@@ -7,18 +7,18 @@ const submitAdmission = async (req, res) => {
   try {
     const admissionData = req.body;
     
+    // Add photo path if file was uploaded (store only relative path)
+    if (req.file) {
+      // Store only the relative path: uploads/admissions/filename.jpg
+      admissionData.photo = `uploads/admissions/${req.file.filename}`;
+    }
+    
     console.log('📝 Received admission data:', JSON.stringify(admissionData, null, 2));
-
-    // Note: Allowing duplicate emails as multiple students can share the same email
-    // (e.g., siblings using parent's email, family email, etc.)
 
     // Create admission application
     console.log('✅ Creating new admission...');
     const admission = await Admission.create(admissionData);
     console.log('✅ Admission created successfully:', admission._id);
-
-    // Calculate age for the response
-    const age = admission.age;
 
     res.status(201).json({
       status: 'success',
@@ -26,12 +26,11 @@ const submitAdmission = async (req, res) => {
       data: {
         admission: {
           id: admission._id,
-          fullName: admission.fullName,
+          name: admission.name,
           email: admission.email,
-          courseLevel: admission.courseLevel,
           status: admission.status,
           submittedAt: admission.submittedAt,
-          age: age
+          age: admission.age
         }
       }
     });
@@ -43,7 +42,10 @@ const submitAdmission = async (req, res) => {
     
     // Handle validation errors
     if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
+      const errors = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message
+      }));
       console.error('Validation errors:', errors);
       return res.status(400).json({
         status: 'error',
@@ -68,7 +70,7 @@ const getAdmissionStatus = async (req, res) => {
     const { email } = req.params;
 
     const admission = await Admission.findOne({ email }).select(
-      'fullName email courseLevel status submittedAt reviewedAt studentId'
+      'name email status submittedAt reviewedAt studentId age'
     );
 
     if (!admission) {
@@ -83,9 +85,8 @@ const getAdmissionStatus = async (req, res) => {
       data: {
         admission: {
           id: admission._id,
-          fullName: admission.fullName,
+          name: admission.name,
           email: admission.email,
-          courseLevel: admission.courseLevel,
           status: admission.status,
           submittedAt: admission.submittedAt,
           reviewedAt: admission.reviewedAt,
@@ -125,22 +126,12 @@ const getAdmissionStats = async (req, res) => {
       }
     });
 
-    const levelStats = await Admission.aggregate([
-      {
-        $group: {
-          _id: '$courseLevel',
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
     res.status(200).json({
       status: 'success',
       data: {
         totalApplications,
         thisMonthApplications,
-        statusBreakdown: stats,
-        levelBreakdown: levelStats
+        statusBreakdown: stats
       }
     });
 
@@ -159,18 +150,17 @@ const getAdmissionStats = async (req, res) => {
 const getAllAdmissions = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 100;
     const skip = (page - 1) * limit;
 
     // Build filter object
     const filter = {};
     if (req.query.status) filter.status = req.query.status;
-    if (req.query.courseLevel) filter.courseLevel = req.query.courseLevel;
     if (req.query.search) {
       filter.$or = [
-        { fullName: { $regex: req.query.search, $options: 'i' } },
+        { name: { $regex: req.query.search, $options: 'i' } },
         { email: { $regex: req.query.search, $options: 'i' } },
-        { phone: { $regex: req.query.search, $options: 'i' } }
+        { mobileNumber: { $regex: req.query.search, $options: 'i' } }
       ];
     }
 

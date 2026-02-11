@@ -52,19 +52,20 @@ beltSchema.index({ isActive: 1 });
 
 // Static method to get belt statistics
 beltSchema.statics.getStatistics = async function() {
-  const totalStudents = await this.aggregate([
-    { $match: { isActive: true } },
-    { $group: { _id: null, total: { $sum: '$students' } } }
-  ]);
+  const Student = mongoose.model('Student');
+  
+  // Count total active students
+  const totalStudents = await Student.countDocuments({ status: 'active' });
 
-  const blackBelts = await this.aggregate([
-    { $match: { color: 'black', isActive: true } },
-    { $group: { _id: null, total: { $sum: '$students' } } }
-  ]);
+  // Count black belt students (all black belt levels)
+  const blackBelts = await Student.countDocuments({ 
+    status: 'active',
+    currentBelt: { $in: ['black-1st', 'black-2nd', 'black-3rd'] }
+  });
 
   return {
-    totalStudents: totalStudents[0]?.total || 0,
-    blackBelts: blackBelts[0]?.total || 0,
+    totalStudents: totalStudents || 0,
+    blackBelts: blackBelts || 0,
     totalBeltLevels: await this.countDocuments({ isActive: true })
   };
 };

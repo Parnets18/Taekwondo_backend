@@ -77,8 +77,14 @@ app.use('/uploads', express.static('uploads'));
 // Database connection
 if (process.env.MONGODB_URI) {
   mongoose.connect(process.env.MONGODB_URI)
-    .then(() => {
+    .then(async () => {
       console.log('✅ Connected to MongoDB');
+      
+      // Drop email unique indexes to allow duplicate emails
+      const dropEmailIndexes = require('./utils/dropEmailIndexes');
+      await dropEmailIndexes();
+      
+      // Create default admin
       createDefaultAdmin();
     })
     .catch((error) => {

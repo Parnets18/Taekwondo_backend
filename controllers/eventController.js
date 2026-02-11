@@ -413,6 +413,9 @@ exports.getEventById = async (req, res) => {
 // Create new event (admin/instructor only)
 exports.createEvent = async (req, res) => {
   try {
+    console.log('📝 Creating new event...');
+    console.log('Request body:', req.body);
+    
     const {
       name,
       description,
@@ -432,6 +435,14 @@ exports.createEvent = async (req, res) => {
     } = req.body;
     
     if (!name || !description || !date || !startTime || !location) {
+      console.log('❌ Validation failed - missing required fields');
+      console.log('Missing:', {
+        name: !name,
+        description: !description,
+        date: !date,
+        startTime: !startTime,
+        location: !location
+      });
       return res.status(400).json({
         status: 'error',
         message: 'Name, description, date, start time, and location are required'
@@ -457,7 +468,9 @@ exports.createEvent = async (req, res) => {
       createdBy: req.user?._id
     });
     
+    console.log('💾 Saving event to database...');
     await event.save();
+    console.log('✅ Event saved successfully');
     
     const populatedEvent = await Event.findById(event._id)
       .populate('createdBy', 'name email');
@@ -467,7 +480,8 @@ exports.createEvent = async (req, res) => {
       data: { event: populatedEvent }
     });
   } catch (error) {
-    console.error('Error creating event:', error);
+    console.error('❌ Error creating event:', error);
+    console.error('Error details:', error.message);
     res.status(500).json({
       status: 'error',
       message: 'Failed to create event',
@@ -665,29 +679,42 @@ exports.unregisterFromEvent = async (req, res) => {
 // Get event statistics
 exports.getEventStatistics = async (req, res) => {
   try {
+    console.log('📊 Fetching event statistics...');
+    
     const totalEvents = await Event.countDocuments({ isActive: true });
+    console.log('Total events:', totalEvents);
+    
     const upcomingEvents = await Event.countDocuments({ 
       isActive: true,
       date: { $gte: new Date() },
       status: { $in: ['Upcoming', 'Ongoing'] }
     });
+    console.log('Upcoming events:', upcomingEvents);
+    
     const pastEvents = await Event.countDocuments({ 
       isActive: true,
       date: { $lt: new Date() }
     });
+    console.log('Past events:', pastEvents);
     
     // Get events by type
     const eventsByType = await Event.aggregate([
       { $match: { isActive: true } },
       { $group: { _id: '$eventType', count: { $sum: 1 } } }
     ]);
+    console.log('Events by type:', eventsByType);
     
-    // Get total registrations
-    const totalRegistrations = await Event.aggregate([
+    // Get total registrations - handle empty result
+    const totalRegistrationsResult = await Event.aggregate([
       { $match: { isActive: true } },
-      { $project: { participantCount: { $size: '$registeredParticipants' } } },
+      { $project: { participantCount: { $size: { $ifNull: ['$registeredParticipants', []] } } } },
       { $group: { _id: null, total: { $sum: '$participantCount' } } }
     ]);
+    
+    const totalRegistrations = totalRegistrationsResult.length > 0 ? totalRegistrationsResult[0].total : 0;
+    console.log('Total registrations:', totalRegistrations);
+    
+    console.log('✅ Statistics fetched successfully');
     
     res.status(200).json({
       status: 'success',
@@ -696,11 +723,12 @@ exports.getEventStatistics = async (req, res) => {
         upcomingEvents,
         pastEvents,
         eventsByType,
-        totalRegistrations: totalRegistrations[0]?.total || 0
+        totalRegistrations
       }
     });
   } catch (error) {
-    console.error('Error fetching event statistics:', error);
+    console.error('❌ Error fetching event statistics:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch event statistics',

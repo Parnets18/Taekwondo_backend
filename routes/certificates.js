@@ -5,6 +5,7 @@ const CertificateService = require('../services/CertificateService');
 const QRCode = require('qrcode');
 const path = require('path');
 const { protect, adminOnly, staffOnly } = require('../middleware/auth');
+const certificateController = require('../controllers/certificateController');
 
 const certificateService = new CertificateService();
 
@@ -153,6 +154,13 @@ router.post('/verify', async (req, res) => {
 });
 
 /**
+ * POST /api/certificates
+ * Create new certificate with file upload (admin only)
+ * Requires admin authentication and multipart/form-data
+ */
+router.post('/', protect, adminOnly, certificateController.upload.single('certificateImage'), certificateController.createCertificate);
+
+/**
  * GET /api/certificates/public
  * POST /api/certificates/pubor demo/testing)
  */
@@ -233,133 +241,7 @@ router.get('/public', async (req, res) => {
  * Get certificates for authenticated user
  * Requires authentication
  */
-router.get('/', protect, async (req, res) => {
-  try {
-    console.log('🔐 Authenticated certificates request from user:', req.user.id);
-    console.log('👤 User details:', { id: req.user.id, email: req.user.email, role: req.user.role });
-    
-    const { studentId } = req.query;
-    
-    // If user is admin/staff, they can query any student's certificates
-    // If user is student, they can only see their own certificates
-    let queryUserId = req.user.id;
-    
-    if (studentId && (req.user.role === 'admin' || req.user.role === 'instructor')) {
-      queryUserId = studentId;
-      console.log('🔍 Admin/Staff querying certificates for student:', studentId);
-    } else if (studentId && studentId !== req.user.id) {
-      console.log('❌ User trying to access other student certificates');
-      return res.status(403).json({
-        status: 'error',
-        message: 'Access denied. You can only view your own certificates.'
-      });
-    }
-
-    // Try to get certificates from database
-    let certificates = [];
-    
-    try {
-      // In a real implementation, you would query the database:
-      // certificates = await Certificate.find({ studentId: queryUserId, isActive: true });
-      
-      // For now, return user-specific sample data based on authenticated user
-      certificates = await getUserCertificates(req.user);
-      
-    } catch (dbError) {
-      console.error('Database query error:', dbError);
-      // Return sample data if database query fails
-      certificates = await getUserCertificates(req.user);
-    }
-
-    console.log('✅ Returning certificates for user:', certificates.length);
-
-    res.json({
-      status: 'success',
-      data: {
-        certificates: certificates,
-        user: {
-          id: req.user.id,
-          name: req.user.name || req.user.email,
-          role: req.user.role
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching authenticated certificates:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch certificates'
-    });
-  }
-});
-
-// Helper function to get user-specific certificates
-async function getUserCertificates(user) {
-  // Return certificates that match the admin panel data format
-  const adminPanelCertificates = [
-    {
-      id: 'CERT-4125362',
-      student: 'Golu Vishwakarma',
-      studentName: 'Golu Vishwakarma',
-      title: 'red belt',
-      achievementType: 'red belt',
-      type: 'Belt Promotion',
-      category: 'red belt',
-      beltLevel: 'red belt',
-      level: 'red belt',
-      code: '4125362',
-      issuedDate: new Date('2025-01-23'),
-      formattedIssueDate: 'Jan 23, 2025',
-      verificationCode: 'CERT-4125362',
-      status: 'Issued',
-      year: 2025,
-      userId: user.id,
-      actions: ['view', 'edit', 'download', 'delete']
-    },
-    {
-      id: 'CERT-NAV123',
-      student: 'sxsa',
-      studentName: 'sxsa',
-      title: 'jxbashv',
-      achievementType: 'jxbashv',
-      type: 'Achievement',
-      category: 'hov',
-      beltLevel: 'hov',
-      level: 'hov',
-      code: 'NAV123',
-      issuedDate: new Date('2025-01-22'),
-      formattedIssueDate: 'Jan 22, 2025',
-      verificationCode: 'CERT-NAV123',
-      status: 'Issued',
-      year: 2025,
-      userId: user.id,
-      actions: ['view', 'edit', 'download', 'delete']
-    },
-    {
-      id: 'CERT-CRFT123',
-      student: 'Arjun Sharma',
-      studentName: 'Arjun Sharma',
-      title: 'edweded',
-      achievementType: 'edweded',
-      type: 'Achievement',
-      category: 'erferf',
-      beltLevel: 'erferf',
-      level: 'erferf',
-      code: 'CRFT123',
-      issuedDate: new Date('2025-01-20'),
-      formattedIssueDate: 'Jan 20, 2025',
-      verificationCode: 'CERT-CRFT123',
-      status: 'Issued',
-      year: 2025,
-      userId: user.id,
-      actions: ['view', 'edit', 'download', 'delete']
-    }
-  ];
-
-  // If user is authenticated, return their specific certificates
-  // For demo, we'll return all certificates but you can filter by user.id
-  return adminPanelCertificates;
-}
+router.get('/', protect, certificateController.getCertificates);
 
 /**
  * GET /api/certificates/admin/all
@@ -534,6 +416,20 @@ router.post('/admin/create', protect, adminOnly, async (req, res) => {
     });
   }
 });
+
+/**
+ * DELETE /api/certificates/:id
+ * Delete certificate (admin only)
+ * Requires admin authentication
+ */
+router.delete('/:id', protect, adminOnly, certificateController.deleteCertificate);
+
+/**
+ * PUT /api/certificates/:id
+ * Update certificate (admin only)
+ * Requires admin authentication
+ */
+router.put('/:id', protect, adminOnly, certificateController.upload.single('certificateImage'), certificateController.updateCertificate);
 router.post('/verify', async (req, res) => {
   try {
     const { verificationCode } = req.body;
@@ -679,73 +575,13 @@ router.get('/:id/qr', async (req, res) => {
  * GET /api/certificates/:id/download
  * Download certificate file
  */
-router.get('/:id/download', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // In a real implementation, you would:
-    // 1. Find the certificate by ID
-    // 2. Check permissions
-    // 3. Return the actual PDF file
-    
-    // For demo, return a placeholder response
-    res.json({
-      status: 'success',
-      message: 'Certificate download would be available here',
-      data: {
-        certificateId: id,
-        downloadUrl: `/uploads/certificates/certificate_${id}.pdf`
-      }
-    });
-
-  } catch (error) {
-    console.error('Certificate download failed:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to download certificate'
-    });
-  }
-});
+router.get('/:id/download', certificateController.downloadCertificate);
 
 /**
  * GET /api/certificates/statistics
  * Get certificate statistics (public endpoint for testing)
  */
-router.get('/statistics', async (req, res) => {
-  try {
-    console.log('📊 Loading certificate statistics...');
-    
-    // Sample statistics for demo
-    const stats = {
-      totalCertificates: 156,
-      activeCertificates: 148,
-      revokedCertificates: 8,
-      byType: {
-        'Belt Promotion': 89,
-        'Tournament': 34,
-        'Course Completion': 21,
-        'Achievement': 12
-      },
-      byYear: {
-        '2023': 45,
-        '2024': 78,
-        '2025': 33
-      }
-    };
-
-    res.json({
-      status: 'success',
-      data: stats
-    });
-
-  } catch (error) {
-    console.error('Error fetching certificate statistics:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch certificate statistics'
-    });
-  }
-});
+router.get('/statistics', certificateController.getCertificateStatistics);
 
 /**
  * GET /api/certificates/stats

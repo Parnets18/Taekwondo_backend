@@ -188,7 +188,7 @@ const createStudent = async (req, res) => {
       });
     }
 
-    // Validate age (must be at least 5 years old)
+    // Validate age (must be at least 3 years old)
     const birthDate = new Date(dateOfBirth);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -198,21 +198,28 @@ const createStudent = async (req, res) => {
       age--;
     }
 
-    if (age < 5) {
+    if (age < 3) {
       return res.status(400).json({
         status: 'error',
-        message: `Student must be at least 5 years old. Current age: ${age} years. Please check the date of birth.`
+        message: `Student must be at least 3 years old. Current age: ${age} years. Please check the date of birth.`
       });
     }
 
     // Generate unique student ID - find the highest existing ID and increment
-    const lastStudent = await Student.findOne().sort({ studentId: -1 }).select('studentId');
+    const allStudents = await Student.find().select('studentId').lean();
     let studentId;
     
-    if (lastStudent && lastStudent.studentId) {
-      // Extract number from last student ID (e.g., "STU0001" -> 1)
-      const lastNumber = parseInt(lastStudent.studentId.replace('STU', ''));
-      studentId = `STU${String(lastNumber + 1).padStart(4, '0')}`;
+    if (allStudents && allStudents.length > 0) {
+      // Extract all numbers and find the maximum
+      const numbers = allStudents
+        .map(s => {
+          const match = s.studentId.match(/STU(\d+)/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter(n => !isNaN(n));
+      
+      const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+      studentId = `STU${String(maxNumber + 1).padStart(4, '0')}`;
     } else {
       // No students exist yet, start with STU0001
       studentId = 'STU0001';
@@ -306,7 +313,14 @@ const createStudent = async (req, res) => {
       errorMessage = 'Validation error: ' + Object.values(error.errors).map(e => e.message).join(', ');
       statusCode = 400;
     } else if (error.code === 11000) {
-      errorMessage = 'A student with this email already exists';
+      // Check which field caused the duplicate
+      if (error.message.includes('email')) {
+        errorMessage = 'A student with this email already exists. Please use a different email address.';
+      } else if (error.message.includes('studentId')) {
+        errorMessage = 'Student ID conflict. Please try again.';
+      } else {
+        errorMessage = 'A student with this information already exists.';
+      }
       statusCode = 400;
     } else if (error.message.includes('buffering timed out')) {
       errorMessage = 'Database connection timeout. Please check MongoDB connection.';

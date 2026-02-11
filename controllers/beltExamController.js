@@ -14,6 +14,25 @@ const submitBeltExam = async (req, res) => {
     
     console.log('📝 Received belt exam data:', JSON.stringify(beltExamData, null, 2));
 
+    // Validate age - must be at least 3 years old
+    if (beltExamData.dateOfBirth) {
+      const birthDate = new Date(beltExamData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      if (age < 3) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Candidate must be at least 3 years old. Current age: ${age} years. Please check the date of birth.`
+        });
+      }
+    }
+
     // Create belt exam application
     console.log('✅ Creating new belt exam application...');
     const beltExam = await BeltExam.create(beltExamData);

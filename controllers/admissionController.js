@@ -15,6 +15,25 @@ const submitAdmission = async (req, res) => {
     
     console.log('📝 Received admission data:', JSON.stringify(admissionData, null, 2));
 
+    // Validate age - must be at least 3 years old
+    if (admissionData.dateOfBirth) {
+      const birthDate = new Date(admissionData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      if (age < 3) {
+        return res.status(400).json({
+          status: 'error',
+          message: `Student must be at least 3 years old. Current age: ${age} years. Please check the date of birth.`
+        });
+      }
+    }
+
     // Create admission application
     console.log('✅ Creating new admission...');
     const admission = await Admission.create(admissionData);

@@ -28,7 +28,6 @@ const eventSchema = new mongoose.Schema({
   },
   eventType: {
     type: String,
-    enum: ['Tournament', 'Grading', 'Seminar', 'Training Camp', 'Workshop', 'Competition', 'Other'],
     default: 'Other'
   },
   level: {

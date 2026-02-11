@@ -27,7 +27,7 @@ echo Check deployment status at:
 echo https://dashboard.render.com
 echo.
 echo After deployment, test the fix:
-echo curl https://taekwon-frontend.onrender.com/api/certificates/statistics
+echo curl http://localhost:5000/api/certificates/statistics
 echo.
 echo The admin dashboard should now work without crashes!
 echo.

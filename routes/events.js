@@ -17,6 +17,10 @@ router.get('/test', (req, res) => {
 router.get('/public', eventController.getEventsPublic);
 router.get('/public/:id', eventController.getEventById);
 
+// Statistics route (require authentication) - MUST BE BEFORE /:id route
+router.get('/statistics', protect, eventController.getEventStatistics);
+router.get('/stats/overview', protect, eventController.getEventStatistics); // Keep for backward compatibility
+
 // Protected routes (require authentication)
 router.get('/', protect, eventController.getEvents);
 router.get('/:id', protect, eventController.getEventById);
@@ -24,9 +28,6 @@ router.get('/:id', protect, eventController.getEventById);
 // Student routes (require authentication)
 router.post('/:id/register', protect, eventController.registerForEvent);
 router.post('/:id/unregister', protect, eventController.unregisterFromEvent);
-
-// Statistics route (require authentication)
-router.get('/stats/overview', protect, eventController.getEventStatistics);
 
 // Staff only routes (admin and instructors)
 router.post('/', protect, staffOnly, eventController.createEvent);

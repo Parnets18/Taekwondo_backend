@@ -39,6 +39,6 @@ echo After deployment completes, test with:
 echo   node test-live-endpoint.js
 echo.
 echo Or test in browser:
-echo   http://localhost:5000/api/certificates/statistics
+echo   https://taekwon-frontend.onrender.com/api/certificates/statistics
 echo.
 pause

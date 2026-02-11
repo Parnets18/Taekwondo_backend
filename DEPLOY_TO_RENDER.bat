@@ -35,6 +35,6 @@ echo Check deployment status at:
 echo https://dashboard.render.com
 echo.
 echo After deployment completes, test with:
-echo curl http://localhost:5000/api/fees/public
+echo curl https://taekwon-frontend.onrender.com/api/fees/public
 echo.
 pause

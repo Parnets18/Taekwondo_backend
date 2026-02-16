@@ -63,14 +63,18 @@ const app = express();
 //   }
 //   next();
 // });
+// app.use(cors({
+//   origin: [
+//     'http://localhost:5176',
+//     'https://taekwondo-backend-j8w4.onrender.com',
+//   'https://taekwon.netlify.app'
+//   ],
+//   credentials: true
+// })); 
 app.use(cors({
-  origin: [
-    'http://localhost:5176',
-    'https://taekwondo-backend-j8w4.onrender.com',
-  'https://taekwon.netlify.app'
-  ],
-  credentials: true
+  origin: '*'
 }));
+
 // Simple test route right after app creation
 app.get('/api/simple-test', (req, res) => {
   res.json({ status: 'success', message: 'Simple test route working' });

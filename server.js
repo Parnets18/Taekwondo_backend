@@ -34,6 +34,36 @@ const { createDefaultAdmin } = require('./utils/createAdmin');
 
 const app = express();
 
+// CORS must be the FIRST middleware - before any routes or other middleware
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Allow all origins for now
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400 // 24 hours
+}));
+
+// Add CORS headers manually as backup
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Simple test route right after app creation
 app.get('/api/simple-test', (req, res) => {
   res.json({ status: 'success', message: 'Simple test route working' });
@@ -45,11 +75,6 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(compression());
-
-// CORS configuration - Allow specific origins
-app.use(cors({
-  origin: '*',
-}));
 
 // Logging
 if (process.env.NODE_ENV === 'development') {

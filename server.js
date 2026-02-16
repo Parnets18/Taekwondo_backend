@@ -57,9 +57,6 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Handle preflight requests explicitly
-app.options('*', cors());
-
 // Logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));

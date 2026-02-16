@@ -1,10 +1,10 @@
 @echo off
 echo Testing Certificate Verification Endpoint...
 echo.
-echo Sending POST request to http://localhost:5000/api/certificates/verify
+echo Sending POST request to https://taekwon-frontend.onrender.com/api/certificates/verify
 echo.
 
-curl -X POST http://localhost:5000/api/certificates/verify ^
+curl -X POST https://taekwon-frontend.onrender.com/api/certificates/verify ^
   -H "Content-Type: application/json" ^
   -d "{\"verificationCode\": \"CERT-2026-00123\"}"
 

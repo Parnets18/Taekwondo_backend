@@ -66,7 +66,8 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:5176',
-    'https://taekwon-frontend.onrender.com'
+    'https://taekwon-frontend.onrender.com',
+    "https://taekwon.netlify.app"
   ],
   credentials: true
 }));

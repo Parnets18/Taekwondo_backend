@@ -1,6 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
-// const cors = require('cors');
+const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
@@ -63,7 +63,13 @@ const app = express();
 //   }
 //   next();
 // });
-
+app.use(cors({
+  origin: [
+    'http://localhost:5176',
+    'https://taekwon-frontend.onrender.com'
+  ],
+  credentials: true
+}));
 // Simple test route right after app creation
 app.get('/api/simple-test', (req, res) => {
   res.json({ status: 'success', message: 'Simple test route working' });

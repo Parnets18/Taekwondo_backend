@@ -124,7 +124,7 @@ const createBeltTest = async (req, res) => {
 const updateBeltTest = async (req, res) => {
   try {
     console.log(`✏️ Updating belt test: ${req.params.id}`);
-    const { testDate, readiness, status, testResult, notes } = req.body;
+    const { studentName, currentBelt, testingFor, testDate, readiness, status, testResult, notes } = req.body;
 
     const test = await BeltTest.findById(req.params.id);
     if (!test) {
@@ -135,6 +135,9 @@ const updateBeltTest = async (req, res) => {
     }
 
     // Update fields
+    if (studentName !== undefined) test.studentName = studentName;
+    if (currentBelt !== undefined) test.currentBelt = currentBelt;
+    if (testingFor !== undefined) test.testingFor = testingFor;
     if (testDate !== undefined) test.testDate = testDate;
     if (readiness !== undefined) test.readiness = readiness;
     if (status !== undefined) test.status = status;

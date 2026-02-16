@@ -259,6 +259,74 @@ app.get('/api/test-simple', (req, res) => {
 });
 
 // ============================================================================
+// DIRECT PUBLIC CERTIFICATE VERIFY ENDPOINT - NO AUTH - PLACED BEFORE ALL ROUTES
+// ============================================================================
+app.post('/api/certificates/verify', async (req, res) => {
+  try {
+    console.log('🔍🔍🔍 DIRECT CERTIFICATE VERIFY ENDPOINT HIT (server.js) - NO AUTH 🔍🔍🔍');
+    const Certificate = require('./models/Certificate');
+    const { verificationCode } = req.body;
+
+    if (!verificationCode) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Verification code is required'
+      });
+    }
+
+    console.log('🔍 Verifying certificate with code:', verificationCode);
+
+    // Query the database for the certificate
+    const certificate = await Certificate.findOne({ 
+      verificationCode: verificationCode.toUpperCase() 
+    }).populate('studentId', 'name');
+
+    if (!certificate) {
+      console.log('❌ Certificate not found:', verificationCode);
+      return res.status(404).json({
+        status: 'error',
+        message: 'Certificate not found or invalid verification code'
+      });
+    }
+
+    console.log('✅ Certificate verified successfully:', certificate.verificationCode);
+
+    // Format response to match frontend expectations
+    const responseData = {
+      isValid: true,
+      certificate: {
+        id: certificate.id || certificate._id.toString(),
+        studentName: certificate.studentName,
+        achievementType: certificate.achievementType,
+        achievementDetails: {
+          title: certificate.achievementDetails?.title || certificate.achievementType,
+          description: certificate.achievementDetails?.description || '',
+          level: certificate.achievementDetails?.level || '',
+          grade: certificate.achievementDetails?.grade || '',
+          examiner: certificate.achievementDetails?.examiner || certificate.metadata?.instructorName || 'Academy Director'
+        },
+        issuedDate: certificate.issuedDate,
+        verificationCode: certificate.verificationCode,
+        status: certificate.status,
+        hasFile: !!certificate.filePath
+      }
+    };
+
+    res.json({
+      status: 'success',
+      data: responseData
+    });
+
+  } catch (error) {
+    console.error('❌ Certificate verification failed:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Verification service temporarily unavailable'
+    });
+  }
+});
+
+// ============================================================================
 // DIRECT PUBLIC FEES ENDPOINT - ABSOLUTELY NO AUTH - PLACED BEFORE ALL ROUTES
 // ============================================================================
 app.get('/api/fees/public', async (req, res) => {

@@ -26,109 +26,10 @@ router.post('/verify', async (req, res) => {
 
     console.log('🔍 Verifying certificate with code:', verificationCode);
 
-    // Sample verification data for demo - EXACT match to image design
-    const sampleVerifications = {
-      'CERT-2026-00123': {
-        id: 'CERT-2026-00123',
-        student: 'Rahul Kumar',
-        studentName: 'Rahul Kumar',
-        title: 'Gold Medal',
-        achievementType: 'Gold Medal',
-        type: 'Tournament',
-        category: 'State Level Competition',
-        beltLevel: 'State Level Competition',
-        issuedDate: new Date('2026-01-20'),
-        formattedIssueDate: 'Jan 20, 2026',
-        verificationCode: 'CERT-2026-00123',
-        status: 'Issued'
-      },
-      'CERT-2025-00456': {
-        id: 'CERT-2025-00456',
-        student: 'Priya Sharma',
-        studentName: 'Priya Sharma',
-        title: 'Silver Medal',
-        achievementType: 'Silver Medal',
-        type: 'Tournament',
-        category: 'Regional Championship',
-        beltLevel: 'Regional Championship',
-        issuedDate: new Date('2025-12-15'),
-        formattedIssueDate: 'Dec 15, 2025',
-        verificationCode: 'CERT-2025-00456',
-        status: 'Issued'
-      },
-      'CERT-2025-00789': {
-        id: 'CERT-2025-00789',
-        student: 'Arjun Singh',
-        studentName: 'Arjun Singh',
-        title: 'Black Belt Promotion',
-        achievementType: 'Black Belt Promotion',
-        type: 'Belt Promotion',
-        category: '1st Dan Black Belt',
-        beltLevel: '1st Dan Black Belt',
-        issuedDate: new Date('2025-11-10'),
-        formattedIssueDate: 'Nov 10, 2025',
-        verificationCode: 'CERT-2025-00789',
-        status: 'Issued'
-      },
-      'CERT-2025-00321': {
-        id: 'CERT-2025-00321',
-        student: 'Sneha Patel',
-        studentName: 'Sneha Patel',
-        title: 'Perfect Attendance Award',
-        achievementType: 'Perfect Attendance Award',
-        type: 'Achievement',
-        category: 'Annual Achievement',
-        beltLevel: 'Annual Achievement',
-        issuedDate: new Date('2025-10-05'),
-        formattedIssueDate: 'Oct 05, 2025',
-        verificationCode: 'CERT-2025-00321',
-        status: 'Issued'
-      },
-      'CERT-4125362': {
-        id: 'CERT-4125362',
-        student: 'Golu Vishwakarma',
-        studentName: 'Golu Vishwakarma',
-        title: 'red belt',
-        achievementType: 'red belt',
-        type: 'Belt Promotion',
-        category: 'red belt',
-        beltLevel: 'red belt',
-        issuedDate: new Date('2025-01-23'),
-        formattedIssueDate: 'Jan 23, 2025',
-        verificationCode: 'CERT-4125362',
-        status: 'Issued'
-      },
-      'CERT-NAV123': {
-        id: 'CERT-NAV123',
-        student: 'sxsa',
-        studentName: 'sxsa',
-        title: 'jxbashv',
-        achievementType: 'jxbashv',
-        type: 'Achievement',
-        category: 'hov',
-        beltLevel: 'hov',
-        issuedDate: new Date('2025-01-22'),
-        formattedIssueDate: 'Jan 22, 2025',
-        verificationCode: 'CERT-NAV123',
-        status: 'Issued'
-      },
-      'CERT-CRFT123': {
-        id: 'CERT-CRFT123',
-        student: 'Arjun Sharma',
-        studentName: 'Arjun Sharma',
-        title: 'edweded',
-        achievementType: 'edweded',
-        type: 'Achievement',
-        category: 'erferf',
-        beltLevel: 'erferf',
-        issuedDate: new Date('2025-01-20'),
-        formattedIssueDate: 'Jan 20, 2025',
-        verificationCode: 'CERT-CRFT123',
-        status: 'Issued'
-      }
-    };
-
-    const certificate = sampleVerifications[verificationCode.toUpperCase()];
+    // Query the database for the certificate
+    const certificate = await Certificate.findOne({ 
+      verificationCode: verificationCode.toUpperCase() 
+    }).populate('studentId', 'name');
 
     if (!certificate) {
       return res.status(404).json({
@@ -137,11 +38,32 @@ router.post('/verify', async (req, res) => {
       });
     }
 
-    console.log('✅ Certificate verified successfully:', certificate);
+    console.log('✅ Certificate verified successfully:', certificate.verificationCode);
+
+    // Format response to match frontend expectations
+    const responseData = {
+      isValid: true,
+      certificate: {
+        id: certificate.id || certificate._id.toString(),
+        studentName: certificate.studentName,
+        achievementType: certificate.achievementType,
+        achievementDetails: {
+          title: certificate.achievementDetails?.title || certificate.achievementType,
+          description: certificate.achievementDetails?.description || '',
+          level: certificate.achievementDetails?.level || '',
+          grade: certificate.achievementDetails?.grade || '',
+          examiner: certificate.achievementDetails?.examiner || certificate.metadata?.instructorName || 'Academy Director'
+        },
+        issuedDate: certificate.issuedDate,
+        verificationCode: certificate.verificationCode,
+        status: certificate.status,
+        hasFile: !!certificate.filePath
+      }
+    };
 
     res.json({
       status: 'success',
-      data: certificate
+      data: responseData
     });
 
   } catch (error) {
@@ -430,103 +352,6 @@ router.delete('/:id', protect, adminOnly, certificateController.deleteCertificat
  * Requires admin authentication
  */
 router.put('/:id', protect, adminOnly, certificateController.upload.single('certificateImage'), certificateController.updateCertificate);
-router.post('/verify', async (req, res) => {
-  try {
-    const { verificationCode } = req.body;
-
-    if (!verificationCode) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Verification code is required'
-      });
-    }
-
-    console.log('🔍 Verifying certificate with code:', verificationCode);
-
-    // Sample verification data for demo - EXACT match to image design
-    const sampleVerifications = {
-      'CERT-2026-00123': {
-        id: 'CERT-2026-00123',
-        student: 'Rahul Kumar',
-        studentName: 'Rahul Kumar',
-        title: 'Gold Medal',
-        achievementType: 'Gold Medal',
-        type: 'Tournament',
-        category: 'State Level Competition',
-        beltLevel: 'State Level Competition',
-        issuedDate: new Date('2026-01-20'),
-        formattedIssueDate: 'Jan 20, 2026',
-        verificationCode: 'CERT-2026-00123',
-        status: 'Issued'
-      },
-      'CERT-2025-00456': {
-        id: 'CERT-2025-00456',
-        student: 'Priya Sharma',
-        studentName: 'Priya Sharma',
-        title: 'Silver Medal',
-        achievementType: 'Silver Medal',
-        type: 'Tournament',
-        category: 'Regional Championship',
-        beltLevel: 'Regional Championship',
-        issuedDate: new Date('2025-12-15'),
-        formattedIssueDate: 'Dec 15, 2025',
-        verificationCode: 'CERT-2025-00456',
-        status: 'Issued'
-      },
-      'CERT-2025-00789': {
-        id: 'CERT-2025-00789',
-        student: 'Arjun Singh',
-        studentName: 'Arjun Singh',
-        title: 'Black Belt Promotion',
-        achievementType: 'Black Belt Promotion',
-        type: 'Belt Promotion',
-        category: '1st Dan Black Belt',
-        beltLevel: '1st Dan Black Belt',
-        issuedDate: new Date('2025-11-10'),
-        formattedIssueDate: 'Nov 10, 2025',
-        verificationCode: 'CERT-2025-00789',
-        status: 'Issued'
-      },
-      'CERT-2025-00321': {
-        id: 'CERT-2025-00321',
-        student: 'Sneha Patel',
-        studentName: 'Sneha Patel',
-        title: 'Perfect Attendance Award',
-        achievementType: 'Perfect Attendance Award',
-        type: 'Achievement',
-        category: 'Annual Achievement',
-        beltLevel: 'Annual Achievement',
-        issuedDate: new Date('2025-10-05'),
-        formattedIssueDate: 'Oct 05, 2025',
-        verificationCode: 'CERT-2025-00321',
-        status: 'Issued'
-      }
-    };
-
-    const certificate = sampleVerifications[verificationCode.toUpperCase()];
-
-    if (!certificate) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Certificate not found or invalid verification code'
-      });
-    }
-
-    console.log('✅ Certificate verified successfully:', certificate);
-
-    res.json({
-      status: 'success',
-      data: certificate
-    });
-
-  } catch (error) {
-    console.error('Certificate verification failed:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Verification service temporarily unavailable'
-    });
-  }
-});
 
 /**
  * GET /api/certificates/:id/qr

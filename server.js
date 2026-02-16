@@ -48,13 +48,7 @@ app.use(compression());
 
 // CORS configuration - Allow specific origins
 app.use(cors({
-  origin: '*', // Allow all origins temporarily to test
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  origin: '*',
 }));
 
 // Logging

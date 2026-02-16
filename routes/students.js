@@ -65,7 +65,7 @@ router.delete('/admin/delete-all', adminOnly, async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Error deleting all students',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'production' ? error.message : undefined
     });
   }
 });

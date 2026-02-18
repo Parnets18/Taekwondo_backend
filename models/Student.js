@@ -31,6 +31,15 @@ const studentSchema = new mongoose.Schema({
     required: true,
     enum: ['male', 'female', 'other']
   },
+  bloodGroup: {
+    type: String,
+    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+    default: null
+  },
+  photo: {
+    type: String,
+    required: true
+  },
   
   // Contact Information
   phone: {
@@ -51,16 +60,144 @@ const studentSchema = new mongoose.Schema({
   emergencyContact: {
     name: {
       type: String,
-      required: true
+      default: ''
     },
     phone: {
       type: String,
-      required: true
+      default: ''
     },
     relationship: {
       type: String,
-      required: true
+      default: ''
     }
+  },
+  
+  // Family Information
+  fatherName: {
+    type: String,
+    default: ''
+  },
+  motherName: {
+    type: String,
+    default: ''
+  },
+  fatherPhone: {
+    type: String,
+    default: ''
+  },
+  motherPhone: {
+    type: String,
+    default: ''
+  },
+  fatherOccupation: {
+    type: String,
+    default: ''
+  },
+  motherOccupation: {
+    type: String,
+    default: ''
+  },
+  
+  // Educational Information
+  schoolCollegeName: {
+    type: String,
+    default: ''
+  },
+  qualification: {
+    type: String,
+    default: ''
+  },
+  
+  // Organization Information
+  instructorName: {
+    type: String,
+    default: ''
+  },
+  classAddress: {
+    type: String,
+    default: ''
+  },
+  organizationName: {
+    type: String,
+    default: ''
+  },
+  admissionNumber: {
+    type: String,
+    required: true
+  },
+  joiningDate: {
+    type: Date,
+    required: true
+  },
+  
+  // Student Achievements
+  achievements: [{
+    tournamentName: {
+      type: String,
+      default: ''
+    },
+    address: {
+      type: String,
+      default: ''
+    },
+    date: {
+      type: Date,
+      default: null
+    },
+    prize: {
+      type: String,
+      default: ''
+    }
+  }],
+  
+  // Exam Dates Details (Flattened for easier access)
+  examYellowStripe: {
+    type: Date,
+    default: null
+  },
+  examYellowBelt: {
+    type: Date,
+    default: null
+  },
+  examGreenStripe: {
+    type: Date,
+    default: null
+  },
+  examGreenBelt: {
+    type: Date,
+    default: null
+  },
+  examBlueStripe: {
+    type: Date,
+    default: null
+  },
+  examBlueBelt: {
+    type: Date,
+    default: null
+  },
+  examRedStripe: {
+    type: Date,
+    default: null
+  },
+  examRedBelt: {
+    type: Date,
+    default: null
+  },
+  examBlackStripe: {
+    type: Date,
+    default: null
+  },
+  examBlackBelt: {
+    type: Date,
+    default: null
+  },
+  currentBeltLevel: {
+    type: String,
+    default: ''
+  },
+  idNumber: {
+    type: String,
+    default: ''
   },
   
   // Academic Information
@@ -68,11 +205,6 @@ const studentSchema = new mongoose.Schema({
     type: String,
     enum: ['white', 'yellow', 'green', 'blue', 'red', 'black-1st', 'black-2nd', 'black-3rd'],
     default: 'white'
-  },
-  courseLevel: {
-    type: String,
-    enum: ['beginner', 'intermediate', 'advanced'],
-    required: true
   },
   enrollmentDate: {
     type: Date,
@@ -224,13 +356,6 @@ const studentSchema = new mongoose.Schema({
       default: ''
     }
   }],
-  
-  // Status
-  status: {
-    type: String,
-    enum: ['active', 'inactive', 'suspended', 'graduated'],
-    default: 'active'
-  },
   
   // Timestamps
   createdAt: {

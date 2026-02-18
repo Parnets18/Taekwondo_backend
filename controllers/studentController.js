@@ -71,13 +71,41 @@ const getStudents = async (req, res) => {
           email: student.email,
           phone: student.phone,
           age: student.age,
+          dateOfBirth: student.dateOfBirth,
+          gender: student.gender,
+          bloodGroup: student.bloodGroup,
           currentBelt: student.currentBelt,
-          courseLevel: student.courseLevel,
-          status: student.status,
           enrollmentDate: student.enrollmentDate,
           attendancePercentage: student.attendancePercentage,
           emergencyContact: student.emergencyContact,
           address: student.address,
+          photo: student.photo,
+          fatherName: student.fatherName,
+          motherName: student.motherName,
+          fatherPhone: student.fatherPhone,
+          motherPhone: student.motherPhone,
+          fatherOccupation: student.fatherOccupation,
+          motherOccupation: student.motherOccupation,
+          schoolCollegeName: student.schoolCollegeName,
+          qualification: student.qualification,
+          instructorName: student.instructorName,
+          classAddress: student.classAddress,
+          organizationName: student.organizationName,
+          admissionNumber: student.admissionNumber,
+          joiningDate: student.joiningDate,
+          achievements: student.achievements,
+          examYellowStripe: student.examYellowStripe,
+          examYellowBelt: student.examYellowBelt,
+          examGreenStripe: student.examGreenStripe,
+          examGreenBelt: student.examGreenBelt,
+          examBlueStripe: student.examBlueStripe,
+          examBlueBelt: student.examBlueBelt,
+          examRedStripe: student.examRedStripe,
+          examRedBelt: student.examRedBelt,
+          examBlackStripe: student.examBlackStripe,
+          examBlackBelt: student.examBlackBelt,
+          currentBeltLevel: student.currentBeltLevel,
+          idNumber: student.idNumber,
           user: student.userId
         })),
         pagination: {
@@ -165,26 +193,66 @@ const createStudent = async (req, res) => {
       phone,
       email,
       address,
-      emergencyContact,
       currentBelt = 'white',
       courseLevel,
-      feeStructure
+      feeStructure,
+      bloodGroup,
+      fatherName,
+      motherName,
+      fatherPhone,
+      motherPhone,
+      fatherOccupation,
+      motherOccupation,
+      schoolCollegeName,
+      qualification,
+      instructorName,
+      classAddress,
+      organizationName,
+      admissionNumber,
+      joiningDate,
+      achievements,
+      examYellowStripe,
+      examYellowBelt,
+      examGreenStripe,
+      examGreenBelt,
+      examBlueStripe,
+      examBlueBelt,
+      examRedStripe,
+      examRedBelt,
+      examBlackStripe,
+      examBlackBelt,
+      currentBeltLevel,
+      idNumber
     } = req.body;
 
-    // Validate required fields
-    if (!fullName || !dateOfBirth || !gender || !phone || !email || !address || !emergencyContact || !courseLevel) {
-      console.log('❌ Validation failed. Missing fields:');
-      console.log('  fullName:', fullName);
-      console.log('  dateOfBirth:', dateOfBirth);
-      console.log('  gender:', gender);
-      console.log('  phone:', phone);
-      console.log('  email:', email);
-      console.log('  address:', address);
-      console.log('  emergencyContact:', emergencyContact);
-      console.log('  courseLevel:', courseLevel);
+    console.log('📋 Extracted required fields:');
+    console.log('  fullName:', fullName);
+    console.log('  dateOfBirth:', dateOfBirth);
+    console.log('  gender:', gender);
+    console.log('  phone:', phone);
+    console.log('  email:', email);
+    console.log('  address:', address);
+    console.log('  photo file:', req.file);
+    console.log('  joiningDate:', joiningDate);
+    console.log('  admissionNumber:', admissionNumber);
+
+    // Validate required fields including photo, joiningDate, and admissionNumber
+    if (!fullName || !dateOfBirth || !gender || !phone || !email || !address || !req.file || !joiningDate || !admissionNumber) {
+      console.log('❌ Validation failed. Missing required fields');
       return res.status(400).json({
         status: 'error',
-        message: 'All required fields must be provided'
+        message: 'All required fields must be provided (fullName, dateOfBirth, gender, phone, email, address, photo, joiningDate, admissionNumber)',
+        missingFields: {
+          fullName: !fullName,
+          dateOfBirth: !dateOfBirth,
+          gender: !gender,
+          phone: !phone,
+          email: !email,
+          address: !address,
+          photo: !req.file,
+          joiningDate: !joiningDate,
+          admissionNumber: !admissionNumber
+        }
       });
     }
 
@@ -248,7 +316,7 @@ const createStudent = async (req, res) => {
     */
 
     // Create student record
-    const student = new Student({
+    const studentData = {
       studentId,
       userId,
       fullName: fullName.trim(),
@@ -257,13 +325,11 @@ const createStudent = async (req, res) => {
       phone: phone.trim(),
       email: email.toLowerCase().trim(),
       address: address.trim(),
-      emergencyContact: {
-        name: emergencyContact.name.trim(),
-        phone: emergencyContact.phone.trim(),
-        relationship: emergencyContact.relationship.trim()
-      },
+      emergencyContact: { name: '', phone: '', relationship: '' },
       currentBelt,
-      courseLevel,
+      photo: `uploads/students/${req.file.filename}`, // Photo is required
+      joiningDate: new Date(joiningDate), // Required field
+      admissionNumber: admissionNumber.trim(), // Required field
       feeStructure: feeStructure || {
         monthlyFee: 2000,
         registrationFee: 1000,
@@ -274,7 +340,54 @@ const createStudent = async (req, res) => {
         awardedDate: new Date(),
         notes: 'Initial belt assignment'
       }]
-    });
+    };
+
+    // Add optional fields if provided
+    if (bloodGroup) studentData.bloodGroup = bloodGroup;
+    if (fatherName) studentData.fatherName = fatherName.trim();
+    if (motherName) studentData.motherName = motherName.trim();
+    if (fatherPhone) studentData.fatherPhone = fatherPhone.trim();
+    if (motherPhone) studentData.motherPhone = motherPhone.trim();
+    if (fatherOccupation) studentData.fatherOccupation = fatherOccupation.trim();
+    if (motherOccupation) studentData.motherOccupation = motherOccupation.trim();
+    if (schoolCollegeName) studentData.schoolCollegeName = schoolCollegeName.trim();
+    if (qualification) studentData.qualification = qualification.trim();
+    if (instructorName) studentData.instructorName = instructorName.trim();
+    if (classAddress) studentData.classAddress = classAddress.trim();
+    if (organizationName) studentData.organizationName = organizationName.trim();
+
+    // Add achievements if provided
+    if (achievements) {
+      try {
+        const achievementsArray = typeof achievements === 'string' ? JSON.parse(achievements) : achievements;
+        if (Array.isArray(achievementsArray) && achievementsArray.length > 0) {
+          studentData.achievements = achievementsArray.map(ach => ({
+            tournamentName: ach.tournamentName || '',
+            address: ach.address || '',
+            date: ach.date ? new Date(ach.date) : null,
+            prize: ach.prize || ''
+          }));
+        }
+      } catch (error) {
+        console.log('Error parsing achievements:', error);
+      }
+    }
+
+    // Add exam dates if provided
+    if (examYellowStripe) studentData.examYellowStripe = new Date(examYellowStripe);
+    if (examYellowBelt) studentData.examYellowBelt = new Date(examYellowBelt);
+    if (examGreenStripe) studentData.examGreenStripe = new Date(examGreenStripe);
+    if (examGreenBelt) studentData.examGreenBelt = new Date(examGreenBelt);
+    if (examBlueStripe) studentData.examBlueStripe = new Date(examBlueStripe);
+    if (examBlueBelt) studentData.examBlueBelt = new Date(examBlueBelt);
+    if (examRedStripe) studentData.examRedStripe = new Date(examRedStripe);
+    if (examRedBelt) studentData.examRedBelt = new Date(examRedBelt);
+    if (examBlackStripe) studentData.examBlackStripe = new Date(examBlackStripe);
+    if (examBlackBelt) studentData.examBlackBelt = new Date(examBlackBelt);
+    if (currentBeltLevel) studentData.currentBeltLevel = currentBeltLevel.trim();
+    if (idNumber) studentData.idNumber = idNumber.trim();
+
+    const student = new Student(studentData);
 
     console.log('💾 Attempting to save student to database...');
     const savedStudent = await student.save();
@@ -341,6 +454,9 @@ const createStudent = async (req, res) => {
 // @access  Private (Admin/Staff)
 const updateStudent = async (req, res) => {
   try {
+    console.log('📝 Update student request received for ID:', req.params.id);
+    console.log('📦 Request body:', req.body);
+    
     const updates = req.body;
     
     // Remove fields that shouldn't be updated directly
@@ -350,9 +466,55 @@ const updateStudent = async (req, res) => {
     delete updates.admissionId;
     delete updates.createdAt;
 
+    // Add photo path if file was uploaded
+    if (req.file) {
+      updates.photo = `uploads/students/${req.file.filename}`;
+      console.log('📷 New photo uploaded:', updates.photo);
+    }
+
+    // Parse achievements if it's a string
+    if (updates.achievements) {
+      if (typeof updates.achievements === 'string') {
+        try {
+          updates.achievements = JSON.parse(updates.achievements);
+          console.log('✅ Parsed achievements:', updates.achievements);
+        } catch (error) {
+          console.log('❌ Error parsing achievements:', error);
+          delete updates.achievements; // Remove invalid achievements
+        }
+      }
+      
+      // Filter out empty achievements
+      if (Array.isArray(updates.achievements)) {
+        updates.achievements = updates.achievements.filter(ach => 
+          ach.tournamentName || ach.address || ach.date || ach.prize
+        );
+        
+        // If all achievements are empty, set to empty array
+        if (updates.achievements.length === 0) {
+          updates.achievements = [];
+        }
+      }
+    }
+
+    // Convert date strings to Date objects
+    const dateFields = [
+      'dateOfBirth', 'joiningDate', 'enrollmentDate',
+      'examYellowStripe', 'examYellowBelt', 'examGreenStripe', 'examGreenBelt',
+      'examBlueStripe', 'examBlueBelt', 'examRedStripe', 'examRedBelt',
+      'examBlackStripe', 'examBlackBelt'
+    ];
+    
+    dateFields.forEach(field => {
+      if (updates[field] && typeof updates[field] === 'string') {
+        updates[field] = new Date(updates[field]);
+      }
+    });
+
     // Update the updatedAt field
     updates.updatedAt = new Date();
 
+    console.log('💾 Attempting to update student...');
     const student = await Student.findByIdAndUpdate(
       req.params.id,
       updates,
@@ -360,11 +522,14 @@ const updateStudent = async (req, res) => {
     ).populate('userId', 'name email phone');
 
     if (!student) {
+      console.log('❌ Student not found');
       return res.status(404).json({
         status: 'error',
         message: 'Student not found'
       });
     }
+
+    console.log('✅ Student updated successfully');
 
     res.status(200).json({
       status: 'success',
@@ -377,22 +542,64 @@ const updateStudent = async (req, res) => {
           email: student.email,
           phone: student.phone,
           age: student.age,
+          dateOfBirth: student.dateOfBirth,
+          gender: student.gender,
+          bloodGroup: student.bloodGroup,
           currentBelt: student.currentBelt,
-          courseLevel: student.courseLevel,
-          status: student.status,
           address: student.address,
           emergencyContact: student.emergencyContact,
           enrollmentDate: student.enrollmentDate,
+          photo: student.photo,
+          fatherName: student.fatherName,
+          motherName: student.motherName,
+          fatherPhone: student.fatherPhone,
+          motherPhone: student.motherPhone,
+          fatherOccupation: student.fatherOccupation,
+          motherOccupation: student.motherOccupation,
+          schoolCollegeName: student.schoolCollegeName,
+          qualification: student.qualification,
+          instructorName: student.instructorName,
+          classAddress: student.classAddress,
+          organizationName: student.organizationName,
+          admissionNumber: student.admissionNumber,
+          joiningDate: student.joiningDate,
+          achievements: student.achievements,
+          examYellowStripe: student.examYellowStripe,
+          examYellowBelt: student.examYellowBelt,
+          examGreenStripe: student.examGreenStripe,
+          examGreenBelt: student.examGreenBelt,
+          examBlueStripe: student.examBlueStripe,
+          examBlueBelt: student.examBlueBelt,
+          examRedStripe: student.examRedStripe,
+          examRedBelt: student.examRedBelt,
+          examBlackStripe: student.examBlackStripe,
+          examBlackBelt: student.examBlackBelt,
+          currentBeltLevel: student.currentBeltLevel,
+          idNumber: student.idNumber,
           updatedAt: student.updatedAt
         }
       }
     });
 
   } catch (error) {
-    console.error('Update student error:', error);
-    res.status(500).json({
+    console.error('❌ Update student error:', error);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    
+    let errorMessage = 'Error updating student';
+    let statusCode = 500;
+    
+    if (error.name === 'ValidationError') {
+      errorMessage = 'Validation error: ' + Object.values(error.errors).map(e => e.message).join(', ');
+      statusCode = 400;
+    } else if (error.code === 11000) {
+      errorMessage = 'A student with this information already exists.';
+      statusCode = 400;
+    }
+    
+    res.status(statusCode).json({
       status: 'error',
-      message: 'Error updating student',
+      message: errorMessage,
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

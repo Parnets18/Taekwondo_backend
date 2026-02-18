@@ -30,10 +30,6 @@ const attendanceSchema = new mongoose.Schema({
     enum: ['Present', 'Late', 'Absent', 'Excused'],
     default: 'Present'
   },
-  class: {
-    type: String,
-    required: true
-  },
   duration: {
     type: Number, // in minutes
     default: 0
@@ -55,7 +51,6 @@ attendanceSchema.index({ student: 1, date: 1 }, { unique: true });
 
 // Index for faster queries
 attendanceSchema.index({ date: 1 });
-attendanceSchema.index({ class: 1 });
 attendanceSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Attendance', attendanceSchema);

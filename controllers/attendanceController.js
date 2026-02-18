@@ -5,7 +5,7 @@ const Student = require('../models/Student');
 exports.getAttendancePublic = async (req, res) => {
   try {
     console.log('📊 Public attendance route called');
-    const { date, startDate, endDate, class: className, status, studentId } = req.query || req.body;
+    const { date, startDate, endDate, status, studentId } = req.query || req.body;
     
     let query = {};
     
@@ -24,10 +24,6 @@ exports.getAttendancePublic = async (req, res) => {
       endDate.setHours(23, 59, 59, 999);
       query.date = { $gte: startDate, $lte: endDate };
       console.log('📅 Single date filter:', { startDate, endDate });
-    }
-    
-    if (className && className !== 'all') {
-      query.class = className;
     }
     
     if (status && status !== 'all') {
@@ -68,7 +64,7 @@ exports.getAttendancePublic = async (req, res) => {
 // Get all attendance records with filters (protected)
 exports.getAttendance = async (req, res) => {
   try {
-    const { date, startDate, endDate, class: className, status, studentId } = req.query;
+    const { date, startDate, endDate, status, studentId } = req.query;
     
     let query = {};
     
@@ -85,10 +81,6 @@ exports.getAttendance = async (req, res) => {
       const endDate = new Date(date);
       endDate.setHours(23, 59, 59, 999);
       query.date = { $gte: startDate, $lte: endDate };
-    }
-    
-    if (className && className !== 'all') {
-      query.class = className;
     }
     
     if (status && status !== 'all') {
@@ -120,12 +112,12 @@ exports.getAttendance = async (req, res) => {
 // Mark attendance for a student
 exports.markAttendance = async (req, res) => {
   try {
-    const { studentId, date, checkInTime, status, class: className, notes } = req.body;
+    const { studentId, date, checkInTime, status, notes } = req.body;
     
-    if (!studentId || !date || !checkInTime || !className) {
+    if (!studentId || !date || !checkInTime) {
       return res.status(400).json({
         status: 'error',
-        message: 'Student ID, date, check-in time, and class are required'
+        message: 'Student ID, date, and check-in time are required'
       });
     }
     
@@ -160,7 +152,6 @@ exports.markAttendance = async (req, res) => {
       date: new Date(date),
       checkInTime: new Date(checkInTime),
       status: status || 'Present',
-      class: className,
       notes: notes || '',
       markedBy: req.user?._id
     });
@@ -262,7 +253,7 @@ exports.deleteAttendance = async (req, res) => {
 // Get attendance statistics
 exports.getAttendanceStatistics = async (req, res) => {
   try {
-    const { startDate, endDate, class: className } = req.query;
+    const { startDate, endDate } = req.query;
     
     let query = {};
     
@@ -271,10 +262,6 @@ exports.getAttendanceStatistics = async (req, res) => {
         $gte: new Date(startDate),
         $lte: new Date(endDate)
       };
-    }
-    
-    if (className && className !== 'all') {
-      query.class = className;
     }
     
     const totalRecords = await Attendance.countDocuments(query);
@@ -290,9 +277,6 @@ exports.getAttendanceStatistics = async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     
     const todayQuery = { date: { $gte: today, $lt: tomorrow } };
-    if (className && className !== 'all') {
-      todayQuery.class = className;
-    }
     
     const todayPresent = await Attendance.countDocuments({ ...todayQuery, status: 'Present' });
     const todayLate = await Attendance.countDocuments({ ...todayQuery, status: 'Late' });
@@ -323,7 +307,7 @@ exports.getAttendanceStatistics = async (req, res) => {
 // Bulk mark attendance
 exports.bulkMarkAttendance = async (req, res) => {
   try {
-    const { students, date, checkInTime, class: className, status } = req.body;
+    const { students, date, checkInTime, status } = req.body;
     
     if (!students || !Array.isArray(students) || students.length === 0) {
       return res.status(400).json({
@@ -363,7 +347,6 @@ exports.bulkMarkAttendance = async (req, res) => {
           date: new Date(date),
           checkInTime: new Date(checkInTime),
           status: status || 'Present',
-          class: className,
           markedBy: req.user?._id
         });
         

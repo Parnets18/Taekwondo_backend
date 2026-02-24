@@ -7,7 +7,8 @@ const {
   getStudent,
   createStudent,
   updateStudent,
-  deleteStudent
+  deleteStudent,
+  getUpcomingBirthdays
 } = require('../controllers/studentController');
 const { protect, staffOnly, adminOnly } = require('../middleware/auth');
 const Student = require('../models/Student');
@@ -55,6 +56,9 @@ router.get('/test', (req, res) => {
   res.json({ status: 'success', message: 'Students routes working' });
 });
 
+// Public route to get upcoming birthdays (no auth required)
+router.get('/birthdays', getUpcomingBirthdays);
+
 // Public route to get students (no auth required)
 router.get('/public', async (req, res) => {
   try {
@@ -70,7 +74,7 @@ router.get('/public', async (req, res) => {
     console.log('📈 Total students in database:', totalCount);
     
     const students = await Student.find()
-      .select('fullName photo dateOfBirth gender instructorName joiningDate currentBeltLevel')
+      .select('fullName photo dateOfBirth gender instructorName joiningDate currentBeltLevel achievements')
       .sort({ fullName: 1 });
     
     console.log(`✅ Found ${students.length} students`);
@@ -89,7 +93,8 @@ router.get('/public', async (req, res) => {
         gender: studentObj.gender,
         instructorName: studentObj.instructorName,
         joiningDate: studentObj.joiningDate,
-        currentBeltLevel: studentObj.currentBeltLevel
+        currentBeltLevel: studentObj.currentBeltLevel,
+        achievements: studentObj.achievements || []
       };
     });
     

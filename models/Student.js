@@ -38,7 +38,8 @@ const studentSchema = new mongoose.Schema({
   },
   photo: {
     type: String,
-    required: true
+    required: false,
+    default: null
   },
   
   // Contact Information
@@ -143,6 +144,24 @@ const studentSchema = new mongoose.Schema({
     date: {
       type: Date,
       default: null
+    },
+    // Multiple type-price pairs for each achievement
+    typePrices: [{
+      type: {
+        type: String,
+        enum: ['Individual Sparring', 'Group Sparring', 'Individual Tuls', 'Group Tuls', 'Power Breaking', 'Self Defence Techniques', ''],
+        default: ''
+      },
+      price: {
+        type: String,
+        default: ''
+      }
+    }],
+    // Keep old fields for backward compatibility
+    type: {
+      type: String,
+      enum: ['Individual Sparring', 'Group Sparring', 'Individual Tuls', 'Group Tuls', 'Power Breaking', 'Self Defence Techniques', ''],
+      default: ''
     },
     prize: {
       type: String,

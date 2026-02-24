@@ -28,6 +28,9 @@ const attendanceRoutes = require('./routes/attendance');
 const loginRoutes = require('./routes/login');
 const bannerRoutes = require('./routes/banners');
 const adminBannerRoutes = require('./routes/admin/banners');
+const galleryRoutes = require('./routes/gallery');
+const communityRoutes = require('./routes/community');
+const blackBeltRoutes = require('./routes/blackBelt');
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { createDefaultAdmin } = require('./utils/createAdmin');
@@ -426,6 +429,11 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/login', loginRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/admin/banners', adminBannerRoutes);
+app.use('/api/gallery', galleryRoutes);
+app.use('/api/community', communityRoutes);
+app.use('/api/black-belt', blackBeltRoutes);
+app.use('/api/locations', require('./routes/location'));
+
 
 
 // Health check endpoint - Support both GET and POST

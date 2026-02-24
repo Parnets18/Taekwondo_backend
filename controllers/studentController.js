@@ -236,12 +236,12 @@ const createStudent = async (req, res) => {
     console.log('  joiningDate:', joiningDate);
     console.log('  admissionNumber:', admissionNumber);
 
-    // Validate required fields including photo, joiningDate, and admissionNumber
-    if (!fullName || !dateOfBirth || !gender || !phone || !email || !address || !req.file || !joiningDate || !admissionNumber) {
+    // Validate required fields (photo is now optional)
+    if (!fullName || !dateOfBirth || !gender || !phone || !email || !address || !joiningDate || !admissionNumber) {
       console.log('❌ Validation failed. Missing required fields');
       return res.status(400).json({
         status: 'error',
-        message: 'All required fields must be provided (fullName, dateOfBirth, gender, phone, email, address, photo, joiningDate, admissionNumber)',
+        message: 'All required fields must be provided (fullName, dateOfBirth, gender, phone, email, address, joiningDate, admissionNumber)',
         missingFields: {
           fullName: !fullName,
           dateOfBirth: !dateOfBirth,
@@ -249,7 +249,6 @@ const createStudent = async (req, res) => {
           phone: !phone,
           email: !email,
           address: !address,
-          photo: !req.file,
           joiningDate: !joiningDate,
           admissionNumber: !admissionNumber
         }
@@ -327,7 +326,7 @@ const createStudent = async (req, res) => {
       address: address.trim(),
       emergencyContact: { name: '', phone: '', relationship: '' },
       currentBelt,
-      photo: `uploads/students/${req.file.filename}`, // Photo is required
+      photo: req.file ? `uploads/students/${req.file.filename}` : null, // Photo is now optional
       joiningDate: new Date(joiningDate), // Required field
       admissionNumber: admissionNumber.trim(), // Required field
       feeStructure: feeStructure || {
@@ -365,6 +364,7 @@ const createStudent = async (req, res) => {
             tournamentName: ach.tournamentName || '',
             address: ach.address || '',
             date: ach.date ? new Date(ach.date) : null,
+            type: ach.type || '',
             prize: ach.prize || ''
           }));
         }
@@ -487,7 +487,7 @@ const updateStudent = async (req, res) => {
       // Filter out empty achievements
       if (Array.isArray(updates.achievements)) {
         updates.achievements = updates.achievements.filter(ach => 
-          ach.tournamentName || ach.address || ach.date || ach.prize
+          ach.tournamentName || ach.address || ach.date || ach.type || ach.prize
         );
         
         // If all achievements are empty, set to empty array
@@ -640,10 +640,99 @@ const deleteStudent = async (req, res) => {
   }
 };
 
+// @desc    Get upcoming birthdays
+// @route   GET /api/students/birthdays
+// @access  Public
+const getUpcomingBirthdays = async (req, res) => {
+  try {
+    console.log('🎂 === BIRTHDAY ENDPOINT CALLED ===');
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
+    const currentDay = today.getDate();
+    const currentYear = today.getFullYear();
+    
+    console.log('📅 Current date:', today.toISOString());
+    console.log('📅 Current month:', currentMonth, 'Current day:', currentDay, 'Current year:', currentYear);
+    
+    // Get ALL students (not just active) to debug
+    const students = await Student.find({});
+    console.log('👥 Total students found:', students.length);
+    
+    // Filter students who have a dateOfBirth
+    const studentsWithBirthday = students.filter(s => s.dateOfBirth);
+    console.log('🎂 Students with dateOfBirth:', studentsWithBirthday.length);
+    
+    // Log first few students with their birthdays
+    studentsWithBirthday.slice(0, 10).forEach(student => {
+      console.log(`  - ${student.fullName}: DOB = ${student.dateOfBirth}, Status = ${student.status}`);
+    });
+    
+    // Filter students with birthdays in current month or next month
+    const upcomingBirthdays = studentsWithBirthday
+      .map(student => {
+        const birthDate = new Date(student.dateOfBirth);
+        const birthMonth = birthDate.getMonth() + 1;
+        const birthDay = birthDate.getDate();
+        
+        // Calculate days until birthday this year
+        const thisYearBirthday = new Date(currentYear, birthMonth - 1, birthDay);
+        let daysUntil = Math.ceil((thisYearBirthday - today) / (1000 * 60 * 60 * 24));
+        
+        // If birthday has passed this year, calculate for next year
+        if (daysUntil < 0) {
+          const nextYearBirthday = new Date(currentYear + 1, birthMonth - 1, birthDay);
+          daysUntil = Math.ceil((nextYearBirthday - today) / (1000 * 60 * 60 * 24));
+        }
+        
+        console.log(`  🎂 ${student.fullName}: ${birthMonth}/${birthDay} - ${daysUntil} days until birthday`);
+        
+        return {
+          _id: student._id,
+          fullName: student.fullName,
+          photo: student.photo,
+          currentBelt: student.currentBeltLevel || student.currentBelt,
+          dateOfBirth: student.dateOfBirth,
+          birthMonth,
+          birthDay,
+          daysUntil,
+          isToday: daysUntil === 0,
+          isTomorrow: daysUntil === 1,
+          isThisMonth: birthMonth === currentMonth,
+          isNextMonth: birthMonth === (currentMonth === 12 ? 1 : currentMonth + 1)
+        };
+      })
+      .filter(student => {
+        // Show birthdays within next 120 days (approximately 4 months)
+        const isWithin120Days = student.daysUntil <= 120;
+        if (isWithin120Days) {
+          console.log(`  ✅ Including ${student.fullName} (${student.daysUntil} days)`);
+        }
+        return isWithin120Days;
+      })
+      .sort((a, b) => a.daysUntil - b.daysUntil); // Sort by closest birthday first
+    
+    console.log('🎉 Total birthdays within 120 days:', upcomingBirthdays.length);
+    
+    res.status(200).json({
+      status: 'success',
+      count: upcomingBirthdays.length,
+      data: upcomingBirthdays
+    });
+  } catch (error) {
+    console.error('❌ Get birthdays error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching birthdays',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getStudents,
   getStudent,
   createStudent,
   updateStudent,
-  deleteStudent
+  deleteStudent,
+  getUpcomingBirthdays
 };

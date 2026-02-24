@@ -14,7 +14,22 @@ const beltSchema = new mongoose.Schema({
   color: {
     type: String,
     required: true,
-    enum: ['white', 'yellow', 'orange', 'green', 'blue', 'purple', 'brown', 'red', 'black']
+    enum: [
+      'white', 
+      'white-yellow-stripe',
+      'yellow', 
+      'yellow-green-stripe',
+      'orange', 
+      'green', 
+      'green-blue-stripe',
+      'blue', 
+      'blue-red-stripe',
+      'purple', 
+      'brown', 
+      'red', 
+      'red-black-stripe',
+      'black'
+    ]
   },
   hex: {
     type: String,

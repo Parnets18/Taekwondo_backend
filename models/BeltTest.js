@@ -28,6 +28,14 @@ const beltTestSchema = new mongoose.Schema({
     max: 100,
     default: 0
   },
+  certificateCode: {
+    type: String,
+    trim: true
+  },
+  certificateFile: {
+    type: String,
+    trim: true
+  },
   status: {
     type: String,
     enum: ['scheduled', 'completed', 'passed', 'failed', 'cancelled'],

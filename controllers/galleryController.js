@@ -62,25 +62,40 @@ const getGalleryPhoto = async (req, res) => {
 // Create gallery photo (admin)
 const createGalleryPhoto = async (req, res) => {
   try {
+    console.log('📸 Gallery upload request received');
+    console.log('📋 Request body:', req.body);
+    console.log('📁 Request file:', req.file);
+
     const { title, description, category } = req.body;
 
     if (!req.file) {
+      console.log('❌ No file in request');
       return res.status(400).json({
         status: 'error',
         message: 'Photo is required'
       });
     }
 
+    // Store relative path for local files
+    const photoPath = `uploads/gallery/${req.file.filename}`;
+    console.log(`📸 Saving gallery photo: ${photoPath}`);
+    console.log(`📂 Full file path: ${req.file.path}`);
+
     const photoData = {
       title: title || '',
       description: description || '',
       category: category || 'Other',
-      photo: `uploads/gallery/${req.file.filename}`,
+      photo: photoPath,
       uploadedBy: req.user?._id
     };
 
+    console.log('💾 Photo data to save:', photoData);
+
     const photo = new Gallery(photoData);
     await photo.save();
+
+    console.log(`✅ Gallery photo saved to database with ID: ${photo._id}`);
+    console.log(`✅ Photo path in DB: ${photo.photo}`);
 
     res.status(201).json({
       status: 'success',
@@ -88,7 +103,7 @@ const createGalleryPhoto = async (req, res) => {
       data: { photo }
     });
   } catch (error) {
-    console.error('Error creating gallery photo:', error);
+    console.error('❌ Error creating gallery photo:', error);
     res.status(500).json({
       status: 'error',
       message: 'Error uploading photo',
@@ -119,12 +134,16 @@ const updateGalleryPhoto = async (req, res) => {
 
     // Update photo if new file uploaded
     if (req.file) {
-      // Delete old photo
-      const oldPhotoPath = path.join(__dirname, '..', photo.photo);
-      if (fs.existsSync(oldPhotoPath)) {
-        fs.unlinkSync(oldPhotoPath);
+      // Delete old photo file if it exists
+      if (photo.photo && !photo.photo.startsWith('http')) {
+        const oldPhotoPath = path.join(__dirname, '..', photo.photo);
+        if (fs.existsSync(oldPhotoPath)) {
+          fs.unlinkSync(oldPhotoPath);
+          console.log(`🗑️ Deleted old photo: ${oldPhotoPath}`);
+        }
       }
       photo.photo = `uploads/gallery/${req.file.filename}`;
+      console.log(`📸 Updated photo path: ${photo.photo}`);
     }
 
     await photo.save();
@@ -156,10 +175,12 @@ const deleteGalleryPhoto = async (req, res) => {
       });
     }
 
-    // Delete photo file
-    const photoPath = path.join(__dirname, '..', photo.photo);
-    if (fs.existsSync(photoPath)) {
-      fs.unlinkSync(photoPath);
+    // Only delete local photo file (not Cloudinary URLs)
+    if (photo.photo && !photo.photo.startsWith('http')) {
+      const photoPath = path.join(__dirname, '..', photo.photo);
+      if (fs.existsSync(photoPath)) {
+        fs.unlinkSync(photoPath);
+      }
     }
 
     await Gallery.findByIdAndDelete(req.params.id);

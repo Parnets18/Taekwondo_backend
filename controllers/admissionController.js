@@ -7,9 +7,8 @@ const submitAdmission = async (req, res) => {
   try {
     const admissionData = req.body;
     
-    // Add photo path if file was uploaded (store only relative path)
+    // Add photo path if file was uploaded
     if (req.file) {
-      // Store only the relative path: uploads/admissions/filename.jpg
       admissionData.photo = `uploads/admissions/${req.file.filename}`;
     }
     

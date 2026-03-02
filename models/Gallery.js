@@ -15,8 +15,16 @@ const gallerySchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Training', 'Events', 'Competitions', 'Ceremonies', 'Other'],
-    default: 'Other'
+    enum: [
+      'All', 
+      'Seminars', 
+      'Stunts', 
+      'Our Memories', 
+      'Video',
+      'Competitions',
+      'Belt Ceremonies'
+    ],
+    default: 'All'
   },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,

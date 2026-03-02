@@ -408,7 +408,8 @@ const updateCertificate = async (req, res) => {
       level,
       grade,
       examiner,
-      status
+      status,
+      verificationCode
     } = req.body;
 
     // Update certificate fields
@@ -420,6 +421,24 @@ const updateCertificate = async (req, res) => {
     if (grade) certificate.achievementDetails.grade = grade;
     if (examiner) certificate.achievementDetails.examiner = examiner;
     if (status) certificate.status = status;
+    
+    // Update verification code if provided (case-insensitive, accepts any format)
+    if (verificationCode) {
+      // Check if the new verification code already exists (excluding current certificate)
+      const existingCert = await Certificate.findOne({ 
+        verificationCode: verificationCode.toUpperCase(),
+        _id: { $ne: certificate._id }
+      });
+      
+      if (existingCert) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Verification code already exists. Please use a different code.'
+        });
+      }
+      
+      certificate.verificationCode = verificationCode.toUpperCase();
+    }
 
     // Handle file upload if new file provided
     if (req.file) {

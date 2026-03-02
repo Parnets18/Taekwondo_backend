@@ -326,9 +326,9 @@ const createStudent = async (req, res) => {
       address: address.trim(),
       emergencyContact: { name: '', phone: '', relationship: '' },
       currentBelt,
-      photo: req.file ? `uploads/students/${req.file.filename}` : null, // Photo is now optional
-      joiningDate: new Date(joiningDate), // Required field
-      admissionNumber: admissionNumber.trim(), // Required field
+      photo: req.file ? `uploads/students/${req.file.filename}` : null,
+      joiningDate: new Date(joiningDate),
+      admissionNumber: admissionNumber.trim(),
       feeStructure: feeStructure || {
         monthlyFee: 2000,
         registrationFee: 1000,
@@ -360,13 +360,43 @@ const createStudent = async (req, res) => {
       try {
         const achievementsArray = typeof achievements === 'string' ? JSON.parse(achievements) : achievements;
         if (Array.isArray(achievementsArray) && achievementsArray.length > 0) {
-          studentData.achievements = achievementsArray.map(ach => ({
-            tournamentName: ach.tournamentName || '',
-            address: ach.address || '',
-            date: ach.date ? new Date(ach.date) : null,
-            type: ach.type || '',
-            prize: ach.prize || ''
-          }));
+          studentData.achievements = achievementsArray.map((ach, achIndex) => {
+            const achievement = {
+              tournamentName: ach.tournamentName || '',
+              address: ach.address || '',
+              date: ach.date ? new Date(ach.date) : null,
+              type: ach.type || '',
+              prize: ach.prize || ''
+            };
+            
+            // Handle typePrices with certificate files
+            if (ach.typePrices && Array.isArray(ach.typePrices)) {
+              achievement.typePrices = ach.typePrices.map((tp, tpIndex) => {
+                const typePrice = {
+                  type: tp.type || '',
+                  price: tp.price || '',
+                  certificateCode: tp.certificateCode || ''
+                };
+                
+                // Check if there's a certificate file uploaded
+                const certFileKey = `certificate_${achIndex}_${tpIndex}`;
+                if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
+                  // Save only the relative path
+                  const file = req.files[certFileKey][0];
+                  typePrice.certificateFile = `uploads/students/${file.filename}`;
+                } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
+                  // Keep existing certificate file path
+                  typePrice.certificateFile = tp.certificateFile;
+                } else {
+                  typePrice.certificateFile = '';
+                }
+                
+                return typePrice;
+              });
+            }
+            
+            return achievement;
+          });
         }
       } catch (error) {
         console.log('Error parsing achievements:', error);
@@ -467,8 +497,8 @@ const updateStudent = async (req, res) => {
     delete updates.createdAt;
 
     // Add photo path if file was uploaded
-    if (req.file) {
-      updates.photo = `uploads/students/${req.file.filename}`;
+    if (req.files && req.files.photo && req.files.photo[0]) {
+      updates.photo = `uploads/students/${req.files.photo[0].filename}`;
       console.log('📷 New photo uploaded:', updates.photo);
     }
 
@@ -484,8 +514,47 @@ const updateStudent = async (req, res) => {
         }
       }
       
-      // Filter out empty achievements
+      // Process achievements with certificate files
       if (Array.isArray(updates.achievements)) {
+        updates.achievements = updates.achievements.map((ach, achIndex) => {
+          const achievement = {
+            tournamentName: ach.tournamentName || '',
+            address: ach.address || '',
+            date: ach.date ? new Date(ach.date) : null,
+            type: ach.type || '',
+            prize: ach.prize || ''
+          };
+          
+          // Handle typePrices with certificate files
+          if (ach.typePrices && Array.isArray(ach.typePrices)) {
+            achievement.typePrices = ach.typePrices.map((tp, tpIndex) => {
+              const typePrice = {
+                type: tp.type || '',
+                price: tp.price || '',
+                certificateCode: tp.certificateCode || ''
+              };
+              
+              // Check if there's a certificate file uploaded
+              const certFileKey = `certificate_${achIndex}_${tpIndex}`;
+              if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
+                // Save only the relative path
+                const file = req.files[certFileKey][0];
+                typePrice.certificateFile = `uploads/students/${file.filename}`;
+              } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
+                // Keep existing certificate file path
+                typePrice.certificateFile = tp.certificateFile;
+              } else {
+                typePrice.certificateFile = '';
+              }
+              
+              return typePrice;
+            });
+          }
+          
+          return achievement;
+        });
+        
+        // Filter out empty achievements
         updates.achievements = updates.achievements.filter(ach => 
           ach.tournamentName || ach.address || ach.date || ach.type || ach.prize
         );

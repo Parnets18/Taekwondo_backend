@@ -1,5 +1,4 @@
 const express = require('express');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const {
@@ -12,43 +11,9 @@ const {
 } = require('../controllers/studentController');
 const { protect, staffOnly, adminOnly } = require('../middleware/auth');
 const Student = require('../models/Student');
+const { uploadStudent } = require('../config/cloudinary');
 
 const router = express.Router();
-
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, '..', 'uploads', 'students');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure multer for photo uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'photo-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
-    }
-  }
-});
 
 // Test route (before auth)
 router.get('/test', (req, res) => {
@@ -74,7 +39,7 @@ router.get('/public', async (req, res) => {
     console.log('📈 Total students in database:', totalCount);
     
     const students = await Student.find()
-      .select('fullName photo dateOfBirth gender instructorName joiningDate currentBeltLevel achievements')
+      .select('fullName photo dateOfBirth gender instructorName joiningDate currentBeltLevel achievements idNumber admissionNumber')
       .sort({ fullName: 1 });
     
     console.log(`✅ Found ${students.length} students`);
@@ -94,7 +59,9 @@ router.get('/public', async (req, res) => {
         instructorName: studentObj.instructorName,
         joiningDate: studentObj.joiningDate,
         currentBeltLevel: studentObj.currentBeltLevel,
-        achievements: studentObj.achievements || []
+        achievements: studentObj.achievements || [],
+        idNumber: studentObj.idNumber,
+        admissionNumber: studentObj.admissionNumber
       };
     });
     
@@ -113,6 +80,35 @@ router.get('/public', async (req, res) => {
       status: 'error',
       message: 'Failed to fetch students',
       error: error.message
+    });
+  }
+});
+
+// Download certificate endpoint (public - no auth required)
+router.get('/certificate/download/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, '..', 'uploads', 'students', filename);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Certificate file not found'
+      });
+    }
+    
+    // Set headers to force download
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error downloading certificate:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error downloading certificate'
     });
   }
 });
@@ -144,12 +140,46 @@ router.delete('/admin/delete-all', adminOnly, async (req, res) => {
 
 // Student CRUD routes
 router.route('/')
-  .get(getStudents) // Allow any authenticated user to get students
-  .post(staffOnly, upload.single('photo'), createStudent);
+  .get(getStudents)
+  .post(staffOnly, uploadStudent.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'certificate_0_0', maxCount: 1 },
+    { name: 'certificate_0_1', maxCount: 1 },
+    { name: 'certificate_0_2', maxCount: 1 },
+    { name: 'certificate_0_3', maxCount: 1 },
+    { name: 'certificate_0_4', maxCount: 1 },
+    { name: 'certificate_1_0', maxCount: 1 },
+    { name: 'certificate_1_1', maxCount: 1 },
+    { name: 'certificate_1_2', maxCount: 1 },
+    { name: 'certificate_1_3', maxCount: 1 },
+    { name: 'certificate_1_4', maxCount: 1 },
+    { name: 'certificate_2_0', maxCount: 1 },
+    { name: 'certificate_2_1', maxCount: 1 },
+    { name: 'certificate_2_2', maxCount: 1 },
+    { name: 'certificate_2_3', maxCount: 1 },
+    { name: 'certificate_2_4', maxCount: 1 }
+  ]), createStudent);
 
 router.route('/:id')
-  .get(getStudent) // Allow any authenticated user to get student details
-  .put(staffOnly, upload.single('photo'), updateStudent)
+  .get(getStudent)
+  .put(staffOnly, uploadStudent.fields([
+    { name: 'photo', maxCount: 1 },
+    { name: 'certificate_0_0', maxCount: 1 },
+    { name: 'certificate_0_1', maxCount: 1 },
+    { name: 'certificate_0_2', maxCount: 1 },
+    { name: 'certificate_0_3', maxCount: 1 },
+    { name: 'certificate_0_4', maxCount: 1 },
+    { name: 'certificate_1_0', maxCount: 1 },
+    { name: 'certificate_1_1', maxCount: 1 },
+    { name: 'certificate_1_2', maxCount: 1 },
+    { name: 'certificate_1_3', maxCount: 1 },
+    { name: 'certificate_1_4', maxCount: 1 },
+    { name: 'certificate_2_0', maxCount: 1 },
+    { name: 'certificate_2_1', maxCount: 1 },
+    { name: 'certificate_2_2', maxCount: 1 },
+    { name: 'certificate_2_3', maxCount: 1 },
+    { name: 'certificate_2_4', maxCount: 1 }
+  ]), updateStudent)
   .delete(staffOnly, deleteStudent);
 
 module.exports = router;

@@ -109,8 +109,8 @@ const updateBlackBeltMember = async (req, res) => {
       });
     }
     
-    // Delete old photo if new one is uploaded
-    if (req.file && member.photo) {
+    // Delete old photo if new one is uploaded (only for local files)
+    if (req.file && member.photo && !member.photo.startsWith('http')) {
       const oldPhotoPath = path.join(__dirname, '..', member.photo);
       if (fs.existsSync(oldPhotoPath)) {
         fs.unlinkSync(oldPhotoPath);
@@ -157,8 +157,8 @@ const deleteBlackBeltMember = async (req, res) => {
       });
     }
     
-    // Delete photo file
-    if (member.photo) {
+    // Delete photo file (only for local files)
+    if (member.photo && !member.photo.startsWith('http')) {
       const photoPath = path.join(__dirname, '..', member.photo);
       if (fs.existsSync(photoPath)) {
         fs.unlinkSync(photoPath);

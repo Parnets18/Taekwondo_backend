@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
+const path = require('path');
 require('dotenv').config();
 
 // Import routes
@@ -31,6 +32,11 @@ const adminBannerRoutes = require('./routes/admin/banners');
 const galleryRoutes = require('./routes/gallery');
 const communityRoutes = require('./routes/community');
 const blackBeltRoutes = require('./routes/blackBelt');
+const aboutSectionRoutes = require('./routes/aboutSection');
+const aboutDojangStoryRoutes = require('./routes/aboutDojangStory');
+const mentorRoutes = require('./routes/mentors');
+const leadershipRoutes = require('./routes/leadership');
+const certificateVerificationRoutes = require('./routes/certificateVerification');
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { createDefaultAdmin } = require('./utils/createAdmin');
@@ -106,9 +112,9 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static files
-// Static files
-app.use('/uploads', express.static('uploads'));
+// Static files - serve uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+console.log('📁 Static files served from:', path.join(__dirname, 'uploads'));
 
 // Database connection
 if (process.env.MONGODB_URI) {
@@ -432,7 +438,12 @@ app.use('/api/admin/banners', adminBannerRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/black-belt', blackBeltRoutes);
+app.use('/api/about-section', aboutSectionRoutes);
+app.use('/api/about-dojang-story', aboutDojangStoryRoutes);
+app.use('/api/mentors', mentorRoutes);
+app.use('/api/leadership', leadershipRoutes);
 app.use('/api/locations', require('./routes/location'));
+app.use('/api/certificate-verification', certificateVerificationRoutes);
 
 
 

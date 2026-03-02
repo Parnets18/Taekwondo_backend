@@ -155,6 +155,14 @@ const studentSchema = new mongoose.Schema({
       price: {
         type: String,
         default: ''
+      },
+      certificateCode: {
+        type: String,
+        default: ''
+      },
+      certificateFile: {
+        type: String,
+        default: ''
       }
     }],
     // Keep old fields for backward compatibility

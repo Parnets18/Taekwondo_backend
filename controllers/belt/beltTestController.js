@@ -85,7 +85,7 @@ const getBeltTestById = async (req, res) => {
 const createBeltTest = async (req, res) => {
   try {
     console.log('➕ Creating new belt test...');
-    const { studentName, studentId, currentBelt, testingFor, testDate, readiness, notes } = req.body;
+    const { studentName, studentId, currentBelt, testingFor, testDate, readiness, notes, certificateCode } = req.body;
 
     const test = new BeltTest({
       studentName,
@@ -95,6 +95,8 @@ const createBeltTest = async (req, res) => {
       testDate,
       readiness: readiness || 0,
       notes,
+      certificateCode,
+      certificateFile: req.file ? `/uploads/belt-exams/${req.file.filename}` : null,
       createdBy: req.user?.id
     });
 
@@ -124,7 +126,7 @@ const createBeltTest = async (req, res) => {
 const updateBeltTest = async (req, res) => {
   try {
     console.log(`✏️ Updating belt test: ${req.params.id}`);
-    const { studentName, currentBelt, testingFor, testDate, readiness, status, testResult, notes } = req.body;
+    const { studentName, currentBelt, testingFor, testDate, readiness, status, testResult, notes, certificateCode } = req.body;
 
     const test = await BeltTest.findById(req.params.id);
     if (!test) {
@@ -143,6 +145,8 @@ const updateBeltTest = async (req, res) => {
     if (status !== undefined) test.status = status;
     if (testResult !== undefined) test.testResult = testResult;
     if (notes !== undefined) test.notes = notes;
+    if (certificateCode !== undefined) test.certificateCode = certificateCode;
+    if (req.file) test.certificateFile = `/uploads/belt-exams/${req.file.filename}`;
 
     await test.save();
 
@@ -227,11 +231,90 @@ const getBeltTestStatistics = async (req, res) => {
   }
 };
 
+// Download certificate
+const downloadCertificate = async (req, res) => {
+  try {
+    console.log(`📥 Downloading certificate for test: ${req.params.id}`);
+    const test = await BeltTest.findById(req.params.id);
+
+    if (!test) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Belt test not found'
+      });
+    }
+
+    if (!test.certificateFile) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No certificate file found for this test'
+      });
+    }
+
+    const path = require('path');
+    const fs = require('fs');
+    const filePath = path.join(__dirname, '../..', test.certificateFile);
+    
+    console.log(`📥 Sending file: ${filePath}`);
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Certificate file not found on server'
+      });
+    }
+    
+    // Get the actual file extension
+    const ext = path.extname(test.certificateFile);
+    const fileName = `certificate_${test.studentName.replace(/\s+/g, '_')}_${test.certificateCode || test._id}${ext}`;
+    
+    // Set appropriate content type based on file extension
+    let contentType = 'application/octet-stream';
+    if (ext === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (ext === '.png') {
+      contentType = 'image/png';
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      contentType = 'image/jpeg';
+    }
+    
+    // Set headers for download
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    
+    // Stream the file
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
+    fileStream.on('error', (err) => {
+      console.error('❌ Error streaming certificate:', err);
+      if (!res.headersSent) {
+        res.status(500).json({
+          status: 'error',
+          message: 'Failed to download certificate',
+          error: err.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error downloading certificate:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to download certificate',
+        error: error.message
+      });
+    }
+  }
+};
+
 module.exports = {
   getBeltTests,
   getBeltTestById,
   createBeltTest,
   updateBeltTest,
   deleteBeltTest,
-  getBeltTestStatistics
+  getBeltTestStatistics,
+  downloadCertificate
 };

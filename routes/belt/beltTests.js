@@ -9,10 +9,12 @@ const {
   createBeltTest,
   updateBeltTest,
   deleteBeltTest,
-  getBeltTestStatistics
+  getBeltTestStatistics,
+  downloadCertificate
 } = require('../../controllers/belt/beltTestController');
 
 const { protect, adminOnly } = require('../../middleware/auth');
+const { uploadBeltExam } = require('../../config/cloudinary');
 
 console.log('📝 Belt Tests routes configured');
 
@@ -478,11 +480,12 @@ router.use(protect);
 // GET routes (authenticated users)
 router.get('/', getBeltTests);
 router.get('/statistics', getBeltTestStatistics);
+router.get('/:id/certificate/download', downloadCertificate);
 router.get('/:id', getBeltTestById);
 
 // Admin only routes
-router.post('/', adminOnly, createBeltTest);
-router.put('/:id', adminOnly, updateBeltTest);
+router.post('/', adminOnly, uploadBeltExam.single('certificateFile'), createBeltTest);
+router.put('/:id', adminOnly, uploadBeltExam.single('certificateFile'), updateBeltTest);
 router.delete('/:id', adminOnly, deleteBeltTest);
 
 module.exports = router;

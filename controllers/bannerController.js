@@ -72,14 +72,6 @@ exports.createBanner = async (req, res) => {
       }
     });
   } catch (error) {
-    // Delete uploaded file if banner creation fails
-    if (req.file) {
-      const filePath = path.join(__dirname, '..', 'uploads', 'banners', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-    
     res.status(400).json({
       status: 'error',
       message: error.message
@@ -99,14 +91,8 @@ exports.updateBanner = async (req, res) => {
       });
     }
     
-    // If new image is uploaded, delete old image
+    // If new image is uploaded
     if (req.file) {
-      if (banner.image) {
-        const oldImagePath = path.join(__dirname, '..', banner.image);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
-      }
       req.body.image = `uploads/banners/${req.file.filename}`;
     }
     
@@ -143,14 +129,6 @@ exports.deleteBanner = async (req, res) => {
         status: 'error',
         message: 'Banner not found'
       });
-    }
-    
-    // Delete image file
-    if (banner.image) {
-      const imagePath = path.join(__dirname, '..', banner.image);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-      }
     }
     
     await Banner.findByIdAndDelete(req.params.id);

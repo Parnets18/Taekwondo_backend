@@ -26,9 +26,73 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Find user
-    const user = await Login.findOne({ email: email.toLowerCase() });
+    // First, try to find user in Login model
+    let user = await Login.findOne({ email: email.toLowerCase() });
+    let isStudent = false;
     
+    console.log('👤 User found in Login model:', !!user);
+    
+    // If not found in Login model, check Student model
+    if (!user) {
+      console.log('🔍 Checking Student model...');
+      const Student = require('../models/Student');
+      const student = await Student.findOne({ email: email.toLowerCase() }).select('+password');
+      
+      console.log('👨‍🎓 Student found:', !!student);
+      
+      if (student) {
+        console.log('📧 Student email:', student.email);
+        console.log('🔑 Student has password:', !!student.password);
+        
+        // Check if student has a password
+        if (!student.password) {
+          console.log('❌ Student has no password set');
+          return res.status(401).json({
+            status: 'error',
+            message: 'Password not set for this student. Please contact administrator.'
+          });
+        }
+        
+        // Student found, verify password
+        console.log('🔐 Comparing passwords...');
+        const isMatch = await bcrypt.compare(password, student.password);
+        console.log('✅ Password match:', isMatch);
+        
+        if (!isMatch) {
+          console.log('❌ Invalid password for student:', email);
+          return res.status(401).json({
+            status: 'error',
+            message: 'Invalid email or password'
+          });
+        }
+        
+        // Student authenticated successfully
+        isStudent = true;
+        
+        // Generate token for student
+        const token = generateToken(student._id);
+        console.log('✅ Student login successful:', email);
+        
+        return res.status(200).json({
+          status: 'success',
+          message: 'Login successful',
+          data: {
+            token: token,
+            user: {
+              id: student._id,
+              email: student.email,
+              name: student.fullName,
+              role: 'student',
+              studentId: student.studentId,
+              admissionNumber: student.admissionNumber,
+              currentBeltLevel: student.currentBeltLevel
+            }
+          }
+        });
+      }
+    }
+    
+    // If still no user found, return error
     if (!user) {
       console.log('❌ User not found:', email);
       return res.status(401).json({
@@ -37,7 +101,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Compare password
+    // User found in Login model, verify password
     const isMatch = await bcrypt.compare(password, user.password);
     
     if (!isMatch) {

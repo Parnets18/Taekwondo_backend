@@ -116,6 +116,46 @@ router.get('/certificate/download/:filename', (req, res) => {
 // Apply authentication to all routes below this point
 router.use(protect);
 
+// Get current student profile (authenticated student)
+router.get('/profile', async (req, res) => {
+  try {
+    console.log('👤 Student profile request');
+    console.log('🆔 User ID from token:', req.user._id);
+    
+    // Find student by the authenticated user's ID
+    const student = await Student.findById(req.user._id)
+      .select('+password'); // Include password field but we won't send it to client
+    
+    if (!student) {
+      console.log('❌ Student not found for ID:', req.user._id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'Student profile not found'
+      });
+    }
+    
+    console.log('✅ Student profile found:', student.fullName);
+    
+    // Convert to object and add virtual fields
+    const studentData = student.toObject({ virtuals: true });
+    
+    // Remove password from response
+    delete studentData.password;
+    
+    res.status(200).json({
+      status: 'success',
+      data: studentData
+    });
+  } catch (error) {
+    console.error('❌ Error fetching student profile:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch profile',
+      error: error.message
+    });
+  }
+});
+
 // Delete all students (admin only)
 router.delete('/admin/delete-all', adminOnly, async (req, res) => {
   try {

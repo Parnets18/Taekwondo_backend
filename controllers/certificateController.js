@@ -152,6 +152,10 @@ console.log("hii")
 // Get all certificates with filtering and pagination
 const getCertificates = async (req, res) => {
   try {
+    console.log('📋 getCertificates called');
+    console.log('👤 User:', req.user?.email, 'Role:', req.user?.role);
+    console.log('👤 User fullName:', req.user?.fullName);
+    
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -161,8 +165,17 @@ const getCertificates = async (req, res) => {
     
     // If this is a student (not staff), filter by student name or ID
     if (req.user && req.user.role === 'student') {
-      // Filter by current student
-      filter.studentId = req.user._id;
+      console.log('🎓 Filtering certificates for student');
+      console.log('🎓 Student ID:', req.user._id);
+      console.log('🎓 Student name:', req.user.fullName);
+      
+      // Filter by student ID OR student name (case-insensitive)
+      filter.$or = [
+        { studentId: req.user._id },
+        { studentName: { $regex: new RegExp(`^${req.user.fullName}$`, 'i') } }
+      ];
+      
+      console.log('🔍 Filter:', JSON.stringify(filter));
     }
     
     if (req.query.status) {
@@ -178,6 +191,8 @@ const getCertificates = async (req, res) => {
       filter['achievementDetails.examiner'] = { $regex: req.query.instructorName, $options: 'i' };
     }
 
+    console.log('🔍 Final filter:', JSON.stringify(filter));
+
     const certificates = await Certificate.find(filter)
       .populate('studentId', 'fullName studentId email phone')
       .populate('templateId', 'name type')
@@ -186,6 +201,8 @@ const getCertificates = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    console.log('📊 Found certificates:', certificates.length);
+
     const total = await Certificate.countDocuments(filter);
 
     // Add image URL for certificates
@@ -193,9 +210,12 @@ const getCertificates = async (req, res) => {
       const certObj = cert.toObject();
       if (certObj.filePath) {
         certObj.imageUrl = `/uploads/certificates/${path.basename(certObj.filePath)}`;
+        console.log('📄 Certificate with file:', certObj.verificationCode, '→', certObj.imageUrl);
       }
       return certObj;
     });
+
+    console.log('✅ Returning', certificatesWithImages.length, 'certificates');
 
     res.json({
       status: 'success',
@@ -212,7 +232,7 @@ const getCertificates = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching certificates:', error);
+    console.error('❌ Error fetching certificates:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch certificates'

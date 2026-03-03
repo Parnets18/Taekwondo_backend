@@ -29,13 +29,32 @@ const protect = async (req, res, next) => {
     const Login = require('../models/login');
     let user = await Login.findById(decoded.id).select('-password');
     
-    // If not found in Login, try User model (for admin/web login)
+    // If not found in Login, try Student model
     if (!user) {
+      console.log('🔍 Checking Student model...');
+      const Student = require('../models/Student');
+      user = await Student.findById(decoded.id).select('-password');
+      
+      if (user) {
+        console.log('👨‍🎓 Student found:', user.fullName);
+        // Add role for consistency
+        user.role = 'student';
+      }
+    }
+    
+    // If still not found, try User model (for admin/web login)
+    if (!user) {
+      console.log('🔍 Checking User model...');
       const User = require('../models/User');
       user = await User.findById(decoded.id).select('-password');
+      
+      if (user) {
+        console.log('👤 User found:', user.name);
+      }
     }
     
     if (!user) {
+      console.log('❌ User not found in any model');
       return res.status(401).json({
         status: 'error',
         message: 'Token is invalid. User not found.'

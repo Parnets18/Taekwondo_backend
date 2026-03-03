@@ -1,30 +1,9 @@
 const mongoose = require('mongoose');
 
 const gallerySchema = new mongoose.Schema({
-  title: {
-    type: String,
-    default: ''
-  },
-  description: {
-    type: String,
-    default: ''
-  },
   photo: {
     type: String,
     required: true
-  },
-  category: {
-    type: String,
-    enum: [
-      'All', 
-      'Seminars', 
-      'Stunts', 
-      'Our Memories', 
-      'Video',
-      'Competitions',
-      'Belt Ceremonies'
-    ],
-    default: 'All'
   },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,

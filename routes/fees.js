@@ -324,6 +324,13 @@ router.get('/student/:studentName',
 // GET /api/fees/:id - Get fee by ID
 router.get('/:id', validateObjectId, getFeeById);
 
+// POST /api/fees/:id/payment - Record payment (students can pay their own fees)
+router.post('/:id/payment', 
+  validateObjectId,
+  validatePaymentRecord,
+  recordPayment
+);
+
 // Admin only routes
 router.use(adminOnly);
 
@@ -414,13 +421,6 @@ router.put('/:id',
   validateObjectId,
   validateFeeCreation,
   updateFee
-);
-
-// POST /api/fees/:id/payment - Record payment
-router.post('/:id/payment', 
-  validateObjectId,
-  validatePaymentRecord,
-  recordPayment
 );
 
 // DELETE /api/fees/:id - Delete fee record

@@ -64,9 +64,20 @@ exports.getAttendancePublic = async (req, res) => {
 // Get all attendance records with filters (protected)
 exports.getAttendance = async (req, res) => {
   try {
+    console.log('📊 getAttendance called');
+    console.log('👤 User:', req.user?.email, 'Role:', req.user?.role);
+    console.log('👤 User fullName:', req.user?.fullName);
+    
     const { date, startDate, endDate, status, studentId } = req.query;
     
     let query = {};
+    
+    // If this is a student (not admin/staff), filter by student name
+    if (req.user && req.user.role === 'student') {
+      console.log('🎓 Filtering attendance for student:', req.user.fullName);
+      // Filter by student ID
+      query.student = req.user._id;
+    }
     
     // Handle date filtering - support both single date and date range
     if (startDate && endDate) {
@@ -87,20 +98,25 @@ exports.getAttendance = async (req, res) => {
       query.status = status;
     }
     
-    if (studentId) {
+    // Only allow admin/staff to filter by specific student
+    if (studentId && req.user.role !== 'student') {
       query.student = studentId;
     }
     
+    console.log('🔍 Final query:', JSON.stringify(query));
+    
     const attendance = await Attendance.find(query)
-      .populate('student', 'fullName email currentBelt studentId courseLevel')
+      .populate('student', 'fullName email currentBeltLevel studentId')
       .sort({ date: -1, checkInTime: -1 });
+    
+    console.log(`✅ Found ${attendance.length} attendance records`);
     
     res.status(200).json({
       status: 'success',
       data: { attendance }
     });
   } catch (error) {
-    console.error('Error fetching attendance:', error);
+    console.error('❌ Error fetching attendance:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch attendance records',

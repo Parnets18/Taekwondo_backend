@@ -1,4 +1,5 @@
 const Student = require('../models/Student');
+const bcrypt = require('bcryptjs');
 
 // @desc    Get all students with filtering and pagination
 // @route   GET /api/students
@@ -192,6 +193,7 @@ const createStudent = async (req, res) => {
       gender,
       phone,
       email,
+      password,
       address,
       currentBelt = 'white',
       courseLevel,
@@ -231,23 +233,25 @@ const createStudent = async (req, res) => {
     console.log('  gender:', gender);
     console.log('  phone:', phone);
     console.log('  email:', email);
+    console.log('  password:', password ? '***' : 'not provided');
     console.log('  address:', address);
     console.log('  photo file:', req.file);
     console.log('  joiningDate:', joiningDate);
     console.log('  admissionNumber:', admissionNumber);
 
     // Validate required fields (photo is now optional)
-    if (!fullName || !dateOfBirth || !gender || !phone || !email || !address || !joiningDate || !admissionNumber) {
+    if (!fullName || !dateOfBirth || !gender || !phone || !email || !password || !address || !joiningDate || !admissionNumber) {
       console.log('❌ Validation failed. Missing required fields');
       return res.status(400).json({
         status: 'error',
-        message: 'All required fields must be provided (fullName, dateOfBirth, gender, phone, email, address, joiningDate, admissionNumber)',
+        message: 'All required fields must be provided (fullName, dateOfBirth, gender, phone, email, password, address, joiningDate, admissionNumber)',
         missingFields: {
           fullName: !fullName,
           dateOfBirth: !dateOfBirth,
           gender: !gender,
           phone: !phone,
           email: !email,
+          password: !password,
           address: !address,
           joiningDate: !joiningDate,
           admissionNumber: !admissionNumber
@@ -294,6 +298,12 @@ const createStudent = async (req, res) => {
     
     console.log('🆔 Generated student ID:', studentId);
 
+    // Hash password before saving
+    console.log('🔐 Hashing password...');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    console.log('✅ Password hashed successfully');
+
     // Create user account for student (optional) - SKIP for now to avoid phone validation issues
     let userId = null;
     // Commenting out user creation to avoid validation errors
@@ -323,6 +333,7 @@ const createStudent = async (req, res) => {
       gender,
       phone: phone.trim(),
       email: email.toLowerCase().trim(),
+      password: hashedPassword,
       address: address.trim(),
       emergencyContact: { name: '', phone: '', relationship: '' },
       currentBelt,
@@ -495,6 +506,17 @@ const updateStudent = async (req, res) => {
     delete updates.userId;
     delete updates.admissionId;
     delete updates.createdAt;
+
+    // Handle password update
+    if (updates.password && updates.password.trim() !== '') {
+      console.log('🔐 Hashing new password...');
+      const salt = await bcrypt.genSalt(10);
+      updates.password = await bcrypt.hash(updates.password, salt);
+      console.log('✅ Password hashed successfully');
+    } else {
+      // Remove password field if empty (don't update password)
+      delete updates.password;
+    }
 
     // Add photo path if file was uploaded
     if (req.files && req.files.photo && req.files.photo[0]) {

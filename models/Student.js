@@ -52,6 +52,11 @@ const studentSchema = new mongoose.Schema({
     required: true,
     lowercase: true
   },
+  password: {
+    type: String,
+    required: true,
+    select: false // Don't include password in queries by default
+  },
   address: {
     type: String,
     required: true

@@ -5,14 +5,7 @@ const path = require('path');
 // Get all gallery photos (public)
 const getGalleryPhotos = async (req, res) => {
   try {
-    const { category } = req.query;
-    
-    let query = { isActive: true };
-    if (category && category !== 'All') {
-      query.category = category;
-    }
-
-    const photos = await Gallery.find(query)
+    const photos = await Gallery.find({ isActive: true })
       .sort({ createdAt: -1 })
       .select('-__v');
 
@@ -64,43 +57,39 @@ const createGalleryPhoto = async (req, res) => {
   try {
     console.log('📸 Gallery upload request received');
     console.log('📋 Request body:', req.body);
-    console.log('📁 Request file:', req.file);
+    console.log('📁 Request files:', req.files);
 
-    const { title, description, category } = req.body;
-
-    if (!req.file) {
-      console.log('❌ No file in request');
+    if (!req.files || req.files.length === 0) {
+      console.log('❌ No files in request');
       return res.status(400).json({
         status: 'error',
-        message: 'Photo is required'
+        message: 'At least one photo is required'
       });
     }
 
-    // Store relative path for local files
-    const photoPath = `uploads/gallery/${req.file.filename}`;
-    console.log(`📸 Saving gallery photo: ${photoPath}`);
-    console.log(`📂 Full file path: ${req.file.path}`);
+    const uploadedPhotos = [];
 
-    const photoData = {
-      title: title || '',
-      description: description || '',
-      category: category || 'Other',
-      photo: photoPath,
-      uploadedBy: req.user?._id
-    };
+    // Process each uploaded file
+    for (const file of req.files) {
+      const photoPath = `uploads/gallery/${file.filename}`;
+      console.log(`📸 Saving gallery photo: ${photoPath}`);
 
-    console.log('💾 Photo data to save:', photoData);
+      const photoData = {
+        photo: photoPath,
+        uploadedBy: req.user?._id
+      };
 
-    const photo = new Gallery(photoData);
-    await photo.save();
+      const photo = new Gallery(photoData);
+      await photo.save();
+      uploadedPhotos.push(photo);
 
-    console.log(`✅ Gallery photo saved to database with ID: ${photo._id}`);
-    console.log(`✅ Photo path in DB: ${photo.photo}`);
+      console.log(`✅ Gallery photo saved to database with ID: ${photo._id}`);
+    }
 
     res.status(201).json({
       status: 'success',
-      message: 'Photo uploaded successfully',
-      data: { photo }
+      message: `${uploadedPhotos.length} photo(s) uploaded successfully`,
+      data: { photos: uploadedPhotos }
     });
   } catch (error) {
     console.error('❌ Error creating gallery photo:', error);
@@ -115,7 +104,7 @@ const createGalleryPhoto = async (req, res) => {
 // Update gallery photo (admin)
 const updateGalleryPhoto = async (req, res) => {
   try {
-    const { title, description, category, isActive } = req.body;
+    const { isActive } = req.body;
 
     const photo = await Gallery.findById(req.params.id);
 
@@ -126,10 +115,7 @@ const updateGalleryPhoto = async (req, res) => {
       });
     }
 
-    // Update fields
-    if (title !== undefined) photo.title = title;
-    if (description !== undefined) photo.description = description;
-    if (category !== undefined) photo.category = category;
+    // Update active status
     if (isActive !== undefined) photo.isActive = isActive;
 
     // Update photo if new file uploaded

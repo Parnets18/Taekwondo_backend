@@ -71,11 +71,87 @@ router.post('/register', validateUserRegistration, async (req, res) => {
 router.post('/login', validateUserLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('🔐 Login attempt for email:', email);
 
-    // Get user from database
-    const user = await User.findOne({ email }).select('+password');
+    // First, try to find user in User model (admin/staff)
+    let user = await User.findOne({ email }).select('+password');
+    let isStudent = false;
     
-    if (!user || !(await user.comparePassword(password))) {
+    console.log('👤 User found in User model:', !!user);
+    
+    // If not found in User model, check Student model
+    if (!user) {
+      console.log('🔍 Checking Student model...');
+      const Student = require('../models/Student');
+      const student = await Student.findOne({ email }).select('+password');
+      
+      console.log('👨‍🎓 Student found:', !!student);
+      
+      if (student) {
+        console.log('📧 Student email:', student.email);
+        console.log('🔑 Student has password:', !!student.password);
+        console.log('🔑 Password length:', student.password ? student.password.length : 0);
+        
+        // Check if student has a password
+        if (!student.password) {
+          console.log('❌ Student has no password set');
+          return res.status(401).json({
+            status: 'error',
+            message: 'Password not set for this student. Please contact administrator.'
+          });
+        }
+        
+        // Student found, verify password
+        const bcrypt = require('bcryptjs');
+        console.log('🔐 Comparing passwords...');
+        const isMatch = await bcrypt.compare(password, student.password);
+        console.log('✅ Password match:', isMatch);
+        
+        if (!isMatch) {
+          return res.status(401).json({
+            status: 'error',
+            message: 'Invalid email or password'
+          });
+        }
+        
+        // Student authenticated successfully
+        isStudent = true;
+        
+        // Generate token for student
+        const token = generateToken(student._id);
+        console.log('✅ Student login successful, token generated');
+        
+        return res.status(200).json({
+          status: 'success',
+          message: 'Login successful',
+          data: {
+            user: {
+              id: student._id,
+              name: student.fullName,
+              email: student.email,
+              phone: student.phone,
+              role: 'student',
+              studentId: student.studentId,
+              admissionNumber: student.admissionNumber,
+              currentBeltLevel: student.currentBeltLevel
+            },
+            token
+          }
+        });
+      }
+    }
+    
+    // If still no user found, return error
+    if (!user) {
+      console.log('❌ No user or student found with email:', email);
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid email or password'
+      });
+    }
+
+    // User found in User model, verify password
+    if (!(await user.comparePassword(password))) {
       return res.status(401).json({
         status: 'error',
         message: 'Invalid email or password'
@@ -112,7 +188,7 @@ router.post('/login', validateUserLogin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
     res.status(401).json({
       status: 'error',
       message: 'Invalid credentials or server error'

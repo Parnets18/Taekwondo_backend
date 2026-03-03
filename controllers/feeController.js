@@ -5,6 +5,10 @@ const { validationResult } = require('express-validator');
 // Get all fees with filtering and pagination
 const getFees = async (req, res) => {
   try {
+    console.log('📋 getFees called');
+    console.log('👤 User:', req.user?.email, 'Role:', req.user?.role);
+    console.log('👤 User fullName:', req.user?.fullName);
+    
     const {
       page = 1,
       limit = 10,
@@ -19,6 +23,13 @@ const getFees = async (req, res) => {
 
     // Build filter object
     const filter = {};
+    
+    // If this is a student (not admin/staff), filter by student name
+    if (req.user && req.user.role === 'student') {
+      console.log('🎓 Filtering fees for student:', req.user.fullName);
+      // Filter by student name (case-insensitive)
+      filter.studentName = { $regex: new RegExp(`^${req.user.fullName}$`, 'i') };
+    }
     
     if (status) filter.status = status;
     if (course) filter.course = course;
@@ -36,14 +47,16 @@ const getFees = async (req, res) => {
       filter.dueDate = { $gte: startDate, $lte: endDate };
     }
 
-    // Search functionality
-    if (search) {
+    // Search functionality (only for admin/staff)
+    if (search && req.user.role !== 'student') {
       filter.$or = [
         { studentName: { $regex: search, $options: 'i' } },
         { feeId: { $regex: search, $options: 'i' } },
         { transactionId: { $regex: search, $options: 'i' } }
       ];
     }
+
+    console.log('🔍 Final filter:', JSON.stringify(filter));
 
     const skip = (page - 1) * limit;
     
@@ -52,11 +65,15 @@ const getFees = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
+    console.log('📊 Found fees:', fees.length);
+
     const total = await Fee.countDocuments(filter);
     const totalPages = Math.ceil(total / limit);
 
     // Get statistics for the filtered data
     const stats = await Fee.getStatistics(filter);
+
+    console.log('✅ Returning', fees.length, 'fees');
 
     res.json({
       status: 'success',
@@ -74,7 +91,7 @@ const getFees = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching fees:', error);
+    console.error('❌ Error fetching fees:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch fees',
@@ -257,12 +274,14 @@ const updateFee = async (req, res) => {
 // Record payment
 const recordPayment = async (req, res) => {
   try {
-    console.log('Recording payment - Request body:', req.body);
-    console.log('Recording payment - Request params:', req.params);
+    console.log('💳 ========== RECORD PAYMENT ==========');
+    console.log('💳 Recording payment - Request body:', req.body);
+    console.log('💳 Recording payment - Request params:', req.params);
+    console.log('💳 User:', req.user?.email, 'Role:', req.user?.role);
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('Validation errors:', errors.array());
+      console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({
         status: 'error',
         message: 'Validation failed',
@@ -272,11 +291,20 @@ const recordPayment = async (req, res) => {
 
     const fee = await Fee.findById(req.params.id);
     if (!fee) {
+      console.log('❌ Fee not found:', req.params.id);
       return res.status(404).json({
         status: 'error',
         message: 'Fee record not found'
       });
     }
+
+    console.log('📋 Current fee state:', {
+      feeId: fee.feeId,
+      amount: fee.amount,
+      totalPaidAmount: fee.totalPaidAmount,
+      status: fee.status,
+      paymentHistoryLength: fee.paymentHistory.length
+    });
 
     const {
       paymentMethod,
@@ -295,8 +323,12 @@ const recordPayment = async (req, res) => {
       paymentAmount = fee.getRemainingAmount();
     }
 
+    console.log('💰 Payment amount:', paymentAmount);
+
     // Validate payment amount
     const remainingAmount = fee.getRemainingAmount();
+    console.log('💰 Remaining amount:', remainingAmount);
+    
     if (paymentAmount <= 0) {
       return res.status(400).json({
         status: 'error',
@@ -328,6 +360,8 @@ const recordPayment = async (req, res) => {
       }
     }
 
+    console.log('💳 Adding payment to fee...');
+    
     // Add payment using the model method
     fee.addPayment({
       amount: paymentAmount,
@@ -349,10 +383,27 @@ const recordPayment = async (req, res) => {
     // Generate receipt number
     fee.generateReceiptNumber();
 
+    console.log('💾 Saving fee with updated payment...');
+    console.log('💾 New state before save:', {
+      totalPaidAmount: fee.totalPaidAmount,
+      status: fee.status,
+      paymentHistoryLength: fee.paymentHistory.length
+    });
+
     await fee.save();
+
+    console.log('✅ Fee saved successfully');
 
     const updatedFee = await Fee.findById(fee._id)
       .populate('updatedBy', 'name email');
+
+    console.log('✅ Updated fee:', {
+      feeId: updatedFee.feeId,
+      amount: updatedFee.amount,
+      totalPaidAmount: updatedFee.totalPaidAmount,
+      status: updatedFee.status,
+      remainingAmount: updatedFee.getRemainingAmount()
+    });
 
     res.json({
       status: 'success',
@@ -365,7 +416,8 @@ const recordPayment = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error recording payment:', error);
+    console.error('❌ Error recording payment:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       status: 'error',
       message: 'Failed to record payment',

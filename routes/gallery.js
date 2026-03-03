@@ -39,7 +39,7 @@ router.post('/test-upload', uploadGallery.single('photo'), (req, res) => {
 });
 
 // Protected routes (admin only)
-router.post('/', protect, authorize('admin'), uploadGallery.single('photo'), createGalleryPhoto);
+router.post('/', protect, authorize('admin'), uploadGallery.array('photos', 20), createGalleryPhoto);
 router.put('/:id', protect, authorize('admin'), uploadGallery.single('photo'), updateGalleryPhoto);
 router.delete('/:id', protect, authorize('admin'), deleteGalleryPhoto);
 

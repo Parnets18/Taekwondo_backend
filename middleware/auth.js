@@ -25,9 +25,15 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('✅ Token decoded:', decoded.id);
 
-    // Get user from token
-    const User = require('../models/User');
-    const user = await User.findById(decoded.id).select('-password');
+    // Try to get user from Login model first (for student/mobile app login)
+    const Login = require('../models/login');
+    let user = await Login.findById(decoded.id).select('-password');
+    
+    // If not found in Login, try User model (for admin/web login)
+    if (!user) {
+      const User = require('../models/User');
+      user = await User.findById(decoded.id).select('-password');
+    }
     
     if (!user) {
       return res.status(401).json({
@@ -36,7 +42,8 @@ const protect = async (req, res, next) => {
       });
     }
 
-    if (!user.isActive) {
+    // Check if user is active (only for User model which has isActive field)
+    if (user.isActive !== undefined && !user.isActive) {
       return res.status(401).json({
         status: 'error',
         message: 'User account is deactivated.'

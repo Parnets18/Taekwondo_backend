@@ -64,7 +64,25 @@ const uploadAdmission = multer({
 
 const uploadBeltExam = multer({ 
   storage: createStorage('belt-exams'),
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    console.log('📎 File upload attempt:');
+    console.log('  - Field name:', file.fieldname);
+    console.log('  - Original name:', file.originalname);
+    console.log('  - MIME type:', file.mimetype);
+    console.log('  - Size:', file.size);
+    
+    // Accept images and PDFs
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      console.log('✅ File type accepted');
+      cb(null, true);
+    } else {
+      console.log('❌ File type rejected:', file.mimetype);
+      cb(new Error(`Invalid file type. Only JPG, PNG, and PDF files are allowed. Received: ${file.mimetype}`), false);
+    }
+  }
 });
 
 module.exports = { 

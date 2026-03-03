@@ -256,6 +256,12 @@ const getCertificateById = async (req, res) => {
 // Create new certificate with image upload
 const createCertificate = async (req, res) => {
   try {
+    console.log('📝 ========== Certificate Creation Request ==========');
+    console.log('📝 Request body:', req.body);
+    console.log('📝 Request file:', req.file);
+    console.log('📝 Content-Type:', req.headers['content-type']);
+    console.log('📝 ================================================');
+    
     // Check for validation errors
     const { validationResult } = require('express-validator');
     const errors = validationResult(req);
@@ -322,16 +328,24 @@ const createCertificate = async (req, res) => {
     let fileHash = null;
     let fileSize = 0;
 
+    console.log('📁 Checking for uploaded file...');
+    console.log('📁 req.file exists:', !!req.file);
+    
     if (req.file) {
       filePath = req.file.path;
       const fileBuffer = await fs.readFile(filePath);
       fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
       fileSize = req.file.size;
-      console.log('📁 File uploaded:', {
+      console.log('📁 File uploaded successfully:', {
         originalName: req.file.originalname,
         size: fileSize,
-        path: filePath
+        path: filePath,
+        destination: req.file.destination,
+        filename: req.file.filename
       });
+    } else {
+      console.log('⚠️ WARNING: No file was uploaded! req.file is undefined');
+      console.log('⚠️ This means multer did not receive the file');
     }
 
     // Create certificate data

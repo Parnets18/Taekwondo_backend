@@ -483,9 +483,35 @@ router.get('/statistics', getBeltTestStatistics);
 router.get('/:id/certificate/download', downloadCertificate);
 router.get('/:id', getBeltTestById);
 
-// Admin only routes
-router.post('/', adminOnly, uploadBeltExam.single('certificateFile'), createBeltTest);
-router.put('/:id', adminOnly, uploadBeltExam.single('certificateFile'), updateBeltTest);
+// Admin only routes with error handling
+router.post('/', adminOnly, (req, res, next) => {
+  uploadBeltExam.single('certificateFile')(req, res, (err) => {
+    if (err) {
+      console.error('❌ Multer upload error:', err);
+      return res.status(400).json({
+        status: 'error',
+        message: err.message || 'File upload failed',
+        error: err.message
+      });
+    }
+    next();
+  });
+}, createBeltTest);
+
+router.put('/:id', adminOnly, (req, res, next) => {
+  uploadBeltExam.single('certificateFile')(req, res, (err) => {
+    if (err) {
+      console.error('❌ Multer upload error:', err);
+      return res.status(400).json({
+        status: 'error',
+        message: err.message || 'File upload failed',
+        error: err.message
+      });
+    }
+    next();
+  });
+}, updateBeltTest);
+
 router.delete('/:id', adminOnly, deleteBeltTest);
 
 module.exports = router;

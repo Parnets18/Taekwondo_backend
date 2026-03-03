@@ -85,7 +85,21 @@ const getBeltTestById = async (req, res) => {
 const createBeltTest = async (req, res) => {
   try {
     console.log('➕ Creating new belt test...');
+    console.log('📦 Request body:', req.body);
+    console.log('📎 Request file:', req.file);
+    
     const { studentName, studentId, currentBelt, testingFor, testDate, readiness, notes, certificateCode } = req.body;
+
+    // Log file upload details
+    if (req.file) {
+      console.log('✅ File uploaded successfully:');
+      console.log('  - Original name:', req.file.originalname);
+      console.log('  - Saved as:', req.file.filename);
+      console.log('  - Path:', req.file.path);
+      console.log('  - Size:', req.file.size, 'bytes');
+    } else {
+      console.log('⚠️ No file uploaded');
+    }
 
     const test = new BeltTest({
       studentName,
@@ -106,6 +120,9 @@ const createBeltTest = async (req, res) => {
       .populate('createdBy', 'name email');
 
     console.log(`✅ Created belt test for: ${test.studentName}`);
+    if (test.certificateFile) {
+      console.log(`📄 Certificate file: ${test.certificateFile}`);
+    }
 
     res.status(201).json({
       status: 'success',
@@ -126,6 +143,9 @@ const createBeltTest = async (req, res) => {
 const updateBeltTest = async (req, res) => {
   try {
     console.log(`✏️ Updating belt test: ${req.params.id}`);
+    console.log('📦 Request body:', req.body);
+    console.log('📎 Request file:', req.file);
+    
     const { studentName, currentBelt, testingFor, testDate, readiness, status, testResult, notes, certificateCode } = req.body;
 
     const test = await BeltTest.findById(req.params.id);
@@ -146,11 +166,24 @@ const updateBeltTest = async (req, res) => {
     if (testResult !== undefined) test.testResult = testResult;
     if (notes !== undefined) test.notes = notes;
     if (certificateCode !== undefined) test.certificateCode = certificateCode;
-    if (req.file) test.certificateFile = `/uploads/belt-exams/${req.file.filename}`;
+    
+    if (req.file) {
+      console.log('✅ New file uploaded:');
+      console.log('  - Original name:', req.file.originalname);
+      console.log('  - Saved as:', req.file.filename);
+      console.log('  - Path:', req.file.path);
+      console.log('  - Size:', req.file.size, 'bytes');
+      test.certificateFile = `/uploads/belt-exams/${req.file.filename}`;
+    } else {
+      console.log('⚠️ No new file uploaded');
+    }
 
     await test.save();
 
     console.log(`✅ Updated belt test for: ${test.studentName}`);
+    if (test.certificateFile) {
+      console.log(`📄 Certificate file: ${test.certificateFile}`);
+    }
 
     res.json({
       status: 'success',
@@ -279,9 +312,13 @@ const downloadCertificate = async (req, res) => {
       contentType = 'image/jpeg';
     }
     
-    // Set headers for download
+    // FORCE DOWNLOAD - Set headers to force download instead of opening
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Transfer-Encoding', 'binary');
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    console.log(`✅ Forcing download with filename: ${fileName}`);
     
     // Stream the file
     const fileStream = fs.createReadStream(filePath);
@@ -296,6 +333,10 @@ const downloadCertificate = async (req, res) => {
           error: err.message
         });
       }
+    });
+    
+    fileStream.on('end', () => {
+      console.log('✅ Certificate download completed');
     });
   } catch (error) {
     console.error('❌ Error downloading certificate:', error);

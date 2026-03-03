@@ -15,6 +15,18 @@ const locationSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
+  },
+  timings: {
+    days: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    time: {
+      type: String,
+      default: '',
+      trim: true
+    }
   }
 }, {
   timestamps: true

@@ -47,10 +47,13 @@ exports.getLocationById = async (req, res) => {
 // Create location
 exports.createLocation = async (req, res) => {
   try {
+    console.log('📍 Creating location with data:', req.body);
     const location = new Location(req.body);
     await location.save();
+    console.log('✅ Location created:', location);
     res.status(201).json(location);
   } catch (error) {
+    console.error('❌ Error creating location:', error);
     res.status(400).json({ message: 'Error creating location', error: error.message });
   }
 };
@@ -58,6 +61,8 @@ exports.createLocation = async (req, res) => {
 // Update location
 exports.updateLocation = async (req, res) => {
   try {
+    console.log('📍 Updating location:', req.params.id);
+    console.log('📍 Update data:', req.body);
     const location = await Location.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -66,8 +71,10 @@ exports.updateLocation = async (req, res) => {
     if (!location) {
       return res.status(404).json({ message: 'Location not found' });
     }
+    console.log('✅ Location updated:', location);
     res.json(location);
   } catch (error) {
+    console.error('❌ Error updating location:', error);
     res.status(400).json({ message: 'Error updating location', error: error.message });
   }
 };

@@ -125,23 +125,46 @@ router.post('/login', validateUserLogin, async (req, res) => {
 // @access  Private
 router.get('/profile', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    // req.user is already set by the protect middleware
+    // It could be from either Login or User model
+    const user = req.user;
     
-    res.status(200).json({
-      status: 'success',
-      data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          isActive: user.isActive,
-          lastLogin: user.lastLogin,
-          createdAt: user.createdAt
+    // Check if this is a Login model user (minimal fields) or User model (full fields)
+    const isLoginUser = !user.role; // Login model doesn't have role field
+    
+    if (isLoginUser) {
+      // Return minimal profile for Login model users
+      res.status(200).json({
+        status: 'success',
+        data: {
+          user: {
+            id: user._id,
+            email: user.email,
+            // Login model doesn't have these fields, so we provide defaults
+            name: user.email.split('@')[0], // Use email prefix as name
+            role: 'student',
+            isActive: true
+          }
         }
-      }
-    });
+      });
+    } else {
+      // Return full profile for User model users
+      res.status(200).json({
+        status: 'success',
+        data: {
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            isActive: user.isActive,
+            lastLogin: user.lastLogin,
+            createdAt: user.createdAt
+          }
+        }
+      });
+    }
 
   } catch (error) {
     console.error('Profile fetch error:', error);

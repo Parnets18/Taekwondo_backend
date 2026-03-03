@@ -18,6 +18,16 @@ const achievementSchema = new mongoose.Schema({
   order: {
     type: Number,
     default: 0
+  },
+  eventName: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  medalType: {
+    type: String,
+    enum: ['Gold', 'Silver', 'Bronze', null],
+    default: null
   }
 }, {
   timestamps: true

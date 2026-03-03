@@ -20,6 +20,21 @@ const communitySchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  achievements: [{
+    eventName: {
+      type: String,
+      trim: true
+    },
+    medalType: {
+      type: String,
+      enum: ['Gold', 'Silver', 'Bronze'],
+      default: null
+    },
+    date: {
+      type: Date,
+      default: null
+    }
+  }],
   isActive: {
     type: Boolean,
     default: true

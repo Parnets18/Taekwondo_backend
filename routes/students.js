@@ -152,6 +152,46 @@ router.get('/certificate/download/:filename', (req, res) => {
 // Apply authentication to all routes below this point
 router.use(protect);
 
+// TEMPORARY: Public profile endpoint for debugging (REMOVE IN PRODUCTION)
+router.get('/profile-debug/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    console.log('🔍 Debug: Looking for student with email:', email);
+    
+    const student = await Student.findOne({ email });
+    
+    if (!student) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Student not found',
+        email: email
+      });
+    }
+    
+    const studentData = student.toObject({ virtuals: true });
+    delete studentData.password;
+    
+    if (!studentData.name && studentData.fullName) {
+      studentData.name = studentData.fullName;
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: studentData,
+      debug: {
+        foundById: student._id,
+        foundByEmail: email
+      }
+    });
+  } catch (error) {
+    console.error('❌ Debug profile error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+});
+
 // Get current student profile (authenticated student)
 router.get('/profile', async (req, res) => {
   try {

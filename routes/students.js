@@ -21,6 +21,42 @@ router.get('/test', (req, res) => {
   res.json({ status: 'success', message: 'Students routes working' });
 });
 
+// Debug route to check student by email (temporary - remove in production)
+router.get('/debug/check-email/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    console.log('🔍 Checking for student with email:', email);
+    
+    const student = await Student.findOne({ email });
+    
+    if (student) {
+      console.log('✅ Student found:', student._id, student.fullName);
+      res.json({
+        status: 'success',
+        message: 'Student found',
+        data: {
+          id: student._id,
+          fullName: student.fullName,
+          email: student.email,
+          hasPassword: !!student.password
+        }
+      });
+    } else {
+      console.log('❌ No student found with email:', email);
+      res.status(404).json({
+        status: 'error',
+        message: 'No student found with this email'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error checking student:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+});
+
 // Public route to get upcoming birthdays (no auth required)
 router.get('/birthdays', getUpcomingBirthdays);
 
@@ -120,27 +156,67 @@ router.use(protect);
 router.get('/profile', async (req, res) => {
   try {
     console.log('👤 Student profile request');
-    console.log('🆔 User ID from token:', req.user._id);
+    console.log('🆔 User from token:', {
+      id: req.user._id,
+      email: req.user.email,
+      role: req.user.role,
+      fullName: req.user.fullName,
+      name: req.user.name,
+      modelName: req.user.constructor?.modelName
+    });
     
-    // Find student by the authenticated user's ID
-    const student = await Student.findById(req.user._id)
-      .select('+password'); // Include password field but we won't send it to client
+    // Check if req.user is already a Student (from protect middleware)
+    let student;
+    
+    // If the user object has fullName, it's likely already a Student
+    if (req.user.fullName) {
+      console.log('✅ User is already a Student object');
+      student = req.user;
+    } else {
+      // Otherwise, try to find the student by ID
+      console.log('🔍 Looking up student by ID:', req.user._id);
+      student = await Student.findById(req.user._id);
+      
+      // If not found by ID, try to find by email
+      if (!student && req.user.email) {
+        console.log('🔍 Looking up student by email:', req.user.email);
+        student = await Student.findOne({ email: req.user.email });
+      }
+    }
     
     if (!student) {
-      console.log('❌ Student not found for ID:', req.user._id);
+      console.log('❌ Student not found');
+      console.log('🔍 User details:', JSON.stringify(req.user, null, 2));
+      
+      // List all students to help debug
+      const allStudents = await Student.find().select('_id email fullName').limit(5);
+      console.log('📋 Sample students in DB:', allStudents);
+      
       return res.status(404).json({
         status: 'error',
-        message: 'Student profile not found'
+        message: 'Student profile not found. Your account may not be set up as a student. Please contact administrator.',
+        debug: {
+          userId: req.user._id,
+          userEmail: req.user.email,
+          userRole: req.user.role,
+          userModel: req.user.constructor?.modelName,
+          hint: 'The authenticated user ID does not match any student record'
+        }
       });
     }
     
     console.log('✅ Student profile found:', student.fullName);
     
     // Convert to object and add virtual fields
-    const studentData = student.toObject({ virtuals: true });
+    const studentData = student.toObject ? student.toObject({ virtuals: true }) : { ...student };
     
     // Remove password from response
     delete studentData.password;
+    
+    // Ensure name field is set (some screens expect 'name' instead of 'fullName')
+    if (!studentData.name && studentData.fullName) {
+      studentData.name = studentData.fullName;
+    }
     
     res.status(200).json({
       status: 'success',
@@ -151,7 +227,8 @@ router.get('/profile', async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch profile',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

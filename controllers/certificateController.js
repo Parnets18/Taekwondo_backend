@@ -209,7 +209,11 @@ const getCertificates = async (req, res) => {
     const certificatesWithImages = certificates.map(cert => {
       const certObj = cert.toObject();
       if (certObj.filePath) {
-        certObj.imageUrl = `/uploads/certificates/${path.basename(certObj.filePath)}`;
+        // Normalize path: remove any duplicate paths and use forward slashes
+        let cleanPath = certObj.filePath.replace(/\\/g, '/');
+        // Extract just the filename
+        const filename = cleanPath.split('/').pop();
+        certObj.imageUrl = `/uploads/certificates/${filename}`;
         console.log('📄 Certificate with file:', certObj.verificationCode, '→', certObj.imageUrl);
       }
       return certObj;
@@ -257,7 +261,11 @@ const getCertificateById = async (req, res) => {
 
     const certObj = certificate.toObject();
     if (certObj.filePath) {
-      certObj.imageUrl = `/uploads/certificates/${path.basename(certObj.filePath)}`;
+      // Normalize path: remove any duplicate paths and use forward slashes
+      let cleanPath = certObj.filePath.replace(/\\/g, '/');
+      // Extract just the filename
+      const filename = cleanPath.split('/').pop();
+      certObj.imageUrl = `/uploads/certificates/${filename}`;
     }
 
     res.json({
@@ -352,16 +360,21 @@ const createCertificate = async (req, res) => {
     console.log('📁 req.file exists:', !!req.file);
     
     if (req.file) {
-      filePath = req.file.path;
-      const fileBuffer = await fs.readFile(filePath);
+      // Normalize path: use forward slashes and construct clean path
+      const filename = req.file.filename;
+      filePath = `uploads/certificates/${filename}`;
+      
+      // Read file for hash using the actual file system path
+      const actualFilePath = req.file.path;
+      const fileBuffer = await fs.readFile(actualFilePath);
       fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
       fileSize = req.file.size;
       console.log('📁 File uploaded successfully:', {
         originalName: req.file.originalname,
         size: fileSize,
-        path: filePath,
-        destination: req.file.destination,
-        filename: req.file.filename
+        storedPath: filePath,
+        actualPath: actualFilePath,
+        filename: filename
       });
     } else {
       console.log('⚠️ WARNING: No file was uploaded! req.file is undefined');
@@ -405,7 +418,11 @@ const createCertificate = async (req, res) => {
 
     const certObj = populatedCertificate.toObject();
     if (certObj.filePath) {
-      certObj.imageUrl = `/uploads/certificates/${path.basename(certObj.filePath)}`;
+      // Normalize path: remove any duplicate paths and use forward slashes
+      let cleanPath = certObj.filePath.replace(/\\/g, '/');
+      // Extract just the filename
+      const filename = cleanPath.split('/').pop();
+      certObj.imageUrl = `/uploads/certificates/${filename}`;
     }
 
     res.status(201).json({
@@ -479,13 +496,21 @@ const updateCertificate = async (req, res) => {
       // Delete old file if exists
       if (certificate.filePath) {
         try {
-          await fs.unlink(certificate.filePath);
+          // Construct actual file path for deletion
+          const oldFilePath = certificate.filePath.replace(/\\/g, '/');
+          const oldFilename = oldFilePath.split('/').pop();
+          const actualOldPath = path.join('uploads', 'certificates', oldFilename);
+          await fs.unlink(actualOldPath);
         } catch (err) {
           console.log('Old file not found or already deleted');
         }
       }
 
-      certificate.filePath = req.file.path;
+      // Normalize path: use forward slashes and construct clean path
+      const filename = req.file.filename;
+      certificate.filePath = `uploads/certificates/${filename}`;
+      
+      // Read file for hash using the actual file system path
       const fileBuffer = await fs.readFile(req.file.path);
       certificate.fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
       certificate.metadata.fileSize = req.file.size;
@@ -498,7 +523,11 @@ const updateCertificate = async (req, res) => {
 
     const certObj = updatedCertificate.toObject();
     if (certObj.filePath) {
-      certObj.imageUrl = `/uploads/certificates/${path.basename(certObj.filePath)}`;
+      // Normalize path: remove any duplicate paths and use forward slashes
+      let cleanPath = certObj.filePath.replace(/\\/g, '/');
+      // Extract just the filename
+      const filename = cleanPath.split('/').pop();
+      certObj.imageUrl = `/uploads/certificates/${filename}`;
     }
 
     res.json({
@@ -529,7 +558,11 @@ const deleteCertificate = async (req, res) => {
     // Delete file if exists
     if (certificate.filePath) {
       try {
-        await fs.unlink(certificate.filePath);
+        // Construct actual file path for deletion
+        const cleanPath = certificate.filePath.replace(/\\/g, '/');
+        const filename = cleanPath.split('/').pop();
+        const actualPath = path.join('uploads', 'certificates', filename);
+        await fs.unlink(actualPath);
       } catch (err) {
         console.log('File not found or already deleted');
       }

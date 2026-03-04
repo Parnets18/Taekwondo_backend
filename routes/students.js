@@ -273,6 +273,55 @@ router.get('/profile', async (req, res) => {
   }
 });
 
+// Update student profile photo (authenticated student)
+router.put('/profile/photo', uploadStudent.single('photo'), async (req, res) => {
+  try {
+    console.log('📸 Updating profile photo for user:', req.user._id);
+    
+    if (!req.file) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No photo file provided'
+      });
+    }
+
+    // Find student
+    let student = await Student.findById(req.user._id);
+    
+    if (!student && req.user.email) {
+      student = await Student.findOne({ email: req.user.email });
+    }
+    
+    if (!student) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Student not found'
+      });
+    }
+
+    // Update photo path
+    student.photo = req.file.path;
+    await student.save();
+
+    console.log('✅ Profile photo updated:', req.file.path);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Profile photo updated successfully',
+      data: {
+        photo: req.file.path
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error updating profile photo:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update profile photo',
+      error: error.message
+    });
+  }
+});
+
 // Delete all students (admin only)
 router.delete('/admin/delete-all', adminOnly, async (req, res) => {
   try {

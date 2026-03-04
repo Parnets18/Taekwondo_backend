@@ -426,11 +426,30 @@ studentSchema.virtual('attendancePercentage').get(function() {
   return Math.round((presentCount / this.attendanceRecords.length) * 100);
 });
 
-// Update updatedAt before saving
-studentSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
+// Hash password before saving
+studentSchema.pre('save', async function(next) {
+  // Only hash the password if it has been modified (or is new)
+  if (!this.isModified('password')) {
+    this.updatedAt = Date.now();
+    return next();
+  }
+
+  try {
+    const bcrypt = require('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    this.updatedAt = Date.now();
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
+
+// Method to compare password for login
+studentSchema.methods.comparePassword = async function(candidatePassword) {
+  const bcrypt = require('bcryptjs');
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 // Ensure virtual fields are included in JSON output
 studentSchema.set('toJSON', { virtuals: true });

@@ -35,6 +35,11 @@ const beltSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  stripeColor: {
+    type: String,
+    default: null,
+    trim: true
+  },
   requirements: [{
     type: String,
     trim: true

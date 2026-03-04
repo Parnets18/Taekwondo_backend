@@ -308,8 +308,48 @@ router.put('/change-password', protect, async (req, res) => {
       });
     }
 
-    // Get user with password
-    const user = await User.findById(req.user.id).select('+password');
+    // Check if user is a Student or User
+    let user;
+    const bcrypt = require('bcryptjs');
+    
+    // Try to find in Student model first
+    const Student = require('../models/Student');
+    const student = await Student.findById(req.user._id).select('+password');
+    
+    if (student) {
+      console.log('👨‍🎓 Changing password for student:', student.fullName);
+      
+      // Verify current password
+      const isMatch = await bcrypt.compare(currentPassword, student.password);
+      if (!isMatch) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Current password is incorrect'
+        });
+      }
+      
+      // Hash and update new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      student.password = hashedPassword;
+      await student.save();
+      
+      console.log('✅ Student password changed successfully');
+      
+      return res.status(200).json({
+        status: 'success',
+        message: 'Password changed successfully'
+      });
+    }
+    
+    // If not a student, try User model
+    user = await User.findById(req.user._id).select('+password');
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
     
     // Check current password
     if (!(await user.comparePassword(currentPassword))) {

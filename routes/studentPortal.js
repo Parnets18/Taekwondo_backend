@@ -7,6 +7,7 @@ const Event = require('../models/Event');
 const Fee = require('../models/Fee');
 const Belt = require('../models/Belt');
 const Promotion = require('../models/Promotion');
+const BeltTest = require('../models/BeltTest');
 
 // Apply authentication to all routes
 router.use(protect);
@@ -168,6 +169,49 @@ router.get('/promotions', async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch promotions',
+      error: error.message
+    });
+  }
+});
+
+// Get student's upcoming belt tests
+router.get('/upcoming-tests', async (req, res) => {
+  try {
+    const studentId = req.user._id;
+    
+    // Get student details first
+    const student = await Student.findById(studentId);
+    
+    if (!student) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Student not found'
+      });
+    }
+    
+    // Get upcoming tests for this student
+    const upcomingTests = await BeltTest.find({ 
+      $or: [
+        { studentId: studentId },
+        { studentName: student.fullName }
+      ],
+      testDate: { $gte: new Date() },
+      status: 'scheduled'
+    })
+      .sort({ testDate: 1 })
+      .populate('studentId', 'fullName');
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        tests: upcomingTests
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching upcoming tests:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch upcoming tests',
       error: error.message
     });
   }

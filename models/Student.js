@@ -41,6 +41,16 @@ const studentSchema = new mongoose.Schema({
     required: false,
     default: null
   },
+  aadhar: {
+    type: String,
+    required: false,
+    default: null
+  },
+  birthCertificate: {
+    type: String,
+    required: false,
+    default: null
+  },
   
   // Contact Information
   phone: {

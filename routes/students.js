@@ -349,6 +349,8 @@ router.route('/')
   .get(getStudents)
   .post(staffOnly, uploadStudent.fields([
     { name: 'photo', maxCount: 1 },
+    { name: 'aadhar', maxCount: 1 },
+    { name: 'birthCertificate', maxCount: 1 },
     { name: 'certificate_0_0', maxCount: 1 },
     { name: 'certificate_0_1', maxCount: 1 },
     { name: 'certificate_0_2', maxCount: 1 },
@@ -370,6 +372,8 @@ router.route('/:id')
   .get(getStudent)
   .put(staffOnly, uploadStudent.fields([
     { name: 'photo', maxCount: 1 },
+    { name: 'aadhar', maxCount: 1 },
+    { name: 'birthCertificate', maxCount: 1 },
     { name: 'certificate_0_0', maxCount: 1 },
     { name: 'certificate_0_1', maxCount: 1 },
     { name: 'certificate_0_2', maxCount: 1 },
@@ -387,5 +391,16 @@ router.route('/:id')
     { name: 'certificate_2_4', maxCount: 1 }
   ]), updateStudent)
   .delete(staffOnly, deleteStudent);
+
+// Download all student documents as PDF
+router.get('/:id/download-documents', staffOnly, async (req, res) => {
+  try {
+    const { downloadStudentDocuments } = require('../controllers/studentController');
+    await downloadStudentDocuments(req, res);
+  } catch (error) {
+    console.error('Error in download documents route:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to download documents' });
+  }
+});
 
 module.exports = router;

@@ -337,7 +337,9 @@ const createStudent = async (req, res) => {
       address: address.trim(),
       emergencyContact: { name: '', phone: '', relationship: '' },
       currentBelt,
-      photo: req.file ? `uploads/students/${req.file.filename}` : null,
+      photo: req.files && req.files.photo && req.files.photo[0] ? `uploads/students/${req.files.photo[0].filename}` : null,
+      aadhar: req.files && req.files.aadhar && req.files.aadhar[0] ? `uploads/students/${req.files.aadhar[0].filename}` : null,
+      birthCertificate: req.files && req.files.birthCertificate && req.files.birthCertificate[0] ? `uploads/students/${req.files.birthCertificate[0].filename}` : null,
       joiningDate: new Date(joiningDate),
       admissionNumber: admissionNumber.trim(),
       feeStructure: feeStructure || {
@@ -522,6 +524,18 @@ const updateStudent = async (req, res) => {
     if (req.files && req.files.photo && req.files.photo[0]) {
       updates.photo = `uploads/students/${req.files.photo[0].filename}`;
       console.log('📷 New photo uploaded:', updates.photo);
+    }
+
+    // Add aadhar path if file was uploaded
+    if (req.files && req.files.aadhar && req.files.aadhar[0]) {
+      updates.aadhar = `uploads/students/${req.files.aadhar[0].filename}`;
+      console.log('🆔 New aadhar uploaded:', updates.aadhar);
+    }
+
+    // Add birth certificate path if file was uploaded
+    if (req.files && req.files.birthCertificate && req.files.birthCertificate[0]) {
+      updates.birthCertificate = `uploads/students/${req.files.birthCertificate[0].filename}`;
+      console.log('📜 New birth certificate uploaded:', updates.birthCertificate);
     }
 
     // Parse achievements if it's a string

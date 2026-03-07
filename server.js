@@ -37,6 +37,7 @@ const aboutDojangStoryRoutes = require('./routes/aboutDojangStory');
 const mentorRoutes = require('./routes/mentors');
 const leadershipRoutes = require('./routes/leadership');
 const certificateVerificationRoutes = require('./routes/certificateVerification');
+const founderRoutes = require('./routes/founders');
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { createDefaultAdmin } = require('./utils/createAdmin');
@@ -75,7 +76,7 @@ const app = express();
 // app.use(cors({
 //   origin: [
 //     'http://localhost:5176',
-//     'https://taekwondo-backend-j8w4.onrender.com',
+//     'http://localhost:5000',
 //   'https://taekwon.netlify.app'
 //   ],
 //   credentials: true
@@ -450,6 +451,7 @@ app.use('/api/mentors', mentorRoutes);
 app.use('/api/leadership', leadershipRoutes);
 app.use('/api/locations', require('./routes/location'));
 app.use('/api/certificate-verification', certificateVerificationRoutes);
+app.use('/api/founders', founderRoutes);
 
 
 

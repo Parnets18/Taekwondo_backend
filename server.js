@@ -38,6 +38,7 @@ const mentorRoutes = require('./routes/mentors');
 const leadershipRoutes = require('./routes/leadership');
 const certificateVerificationRoutes = require('./routes/certificateVerification');
 const founderRoutes = require('./routes/founders');
+const studentPortalRoutes = require('./routes/studentPortal');
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { createDefaultAdmin } = require('./utils/createAdmin');
@@ -450,8 +451,10 @@ app.use('/api/about-dojang-story', aboutDojangStoryRoutes);
 app.use('/api/mentors', mentorRoutes);
 app.use('/api/leadership', leadershipRoutes);
 app.use('/api/locations', require('./routes/location'));
+app.use('/api/students', studentRoutes);
 app.use('/api/certificate-verification', certificateVerificationRoutes);
 app.use('/api/founders', founderRoutes);
+app.use('/api/student-portal', studentPortalRoutes);
 
 
 

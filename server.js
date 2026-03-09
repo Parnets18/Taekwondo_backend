@@ -663,16 +663,16 @@ app.get('/api/belt-tests-public', async (req, res) => {
     const BeltTest = require('./models/BeltTest');
     console.log('🧪 Public belt tests endpoint called (GET)');
     
+    // Get all scheduled tests (including past ones for demo purposes)
     const upcomingTests = await BeltTest.find({ 
-      testDate: { $gte: new Date() },
       status: 'scheduled'
-    }).sort({ testDate: 1 }).limit(50);
+    }).sort({ testDate: -1 }).limit(50);
     
-    console.log(`Found ${upcomingTests.length} upcoming belt tests in database`);
+    console.log(`Found ${upcomingTests.length} belt tests in database`);
     
     res.json({ 
       status: 'success', 
-      message: `Found ${upcomingTests.length} upcoming belt tests`,
+      message: `Found ${upcomingTests.length} belt tests`,
       data: { 
         tests: upcomingTests
       }
@@ -692,16 +692,16 @@ app.post('/api/belt-tests-public', async (req, res) => {
     const BeltTest = require('./models/BeltTest');
     console.log('🧪 Public belt tests endpoint called (POST)');
     
+    // Get all scheduled tests (including past ones for demo purposes)
     const upcomingTests = await BeltTest.find({ 
-      testDate: { $gte: new Date() },
       status: 'scheduled'
-    }).sort({ testDate: 1 }).limit(50);
+    }).sort({ testDate: -1 }).limit(50);
     
-    console.log(`Found ${upcomingTests.length} upcoming belt tests in database`);
+    console.log(`Found ${upcomingTests.length} belt tests in database`);
     
     res.json({ 
       status: 'success', 
-      message: `Found ${upcomingTests.length} upcoming belt tests`,
+      message: `Found ${upcomingTests.length} belt tests`,
       data: { 
         tests: upcomingTests
       }

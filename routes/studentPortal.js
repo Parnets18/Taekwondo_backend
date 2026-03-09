@@ -55,7 +55,7 @@ router.get('/certificates', async (req, res) => {
   try {
     const studentId = req.user._id;
     
-    // Get student with achievements
+    // Get student details first
     const student = await Student.findById(studentId);
     
     if (!student) {
@@ -65,13 +65,44 @@ router.get('/certificates', async (req, res) => {
       });
     }
     
-    // Return achievements as certificates
-    const certificates = student.achievements || [];
+    console.log('📜 Getting certificates for student:', student.fullName);
+    
+    // Get certificates from Certificate model using studentId or studentName
+    const Certificate = require('../models/Certificate');
+    const certificates = await Certificate.find({
+      $or: [
+        { studentId: studentId },
+        { studentName: student.fullName }
+      ],
+      status: 'active'
+    })
+      .sort({ issuedDate: -1 })
+      .lean(); // Use lean() for better performance
+    
+    console.log('📊 Found', certificates.length, 'certificates for', student.fullName);
+    
+    // Transform certificates to match mobile app format
+    const transformedCertificates = certificates.map(cert => ({
+      id: cert._id.toString(),
+      verificationCode: cert.verificationCode,
+      student: cert.studentName,
+      title: cert.achievementDetails?.title || cert.achievementType,
+      type: cert.achievementType,
+      issueDate: new Date(cert.issuedDate).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }),
+      year: new Date(cert.issuedDate).getFullYear(),
+      imageUrl: cert.filePath ? `/uploads/certificates/${require('path').basename(cert.filePath)}` : null,
+      level: cert.achievementDetails?.level,
+      description: cert.achievementDetails?.description
+    }));
     
     res.status(200).json({
       status: 'success',
       data: {
-        certificates
+        certificates: transformedCertificates
       }
     });
   } catch (error) {

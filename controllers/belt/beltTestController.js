@@ -101,6 +101,29 @@ const createBeltTest = async (req, res) => {
       console.log('⚠️ No file uploaded');
     }
 
+    // Determine certificate file path
+    let certificateFilePath = null;
+    if (req.file) {
+      console.log('📎 File object details:', {
+        path: req.file.path,
+        filename: req.file.filename,
+        fieldname: req.file.fieldname,
+        mimetype: req.file.mimetype
+      });
+      
+      // Check if it's a Cloudinary upload
+      // CloudinaryStorage returns the full URL in req.file.path
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        // Cloudinary upload - use full URL as-is
+        certificateFilePath = req.file.path;
+        console.log('☁️ Certificate uploaded to Cloudinary:', certificateFilePath);
+      } else {
+        // Local upload - use relative path WITHOUT leading slash
+        certificateFilePath = `uploads/belt-exams/${req.file.filename}`;
+        console.log('📁 Certificate uploaded locally:', certificateFilePath);
+      }
+    }
+
     const test = new BeltTest({
       studentName,
       studentId,
@@ -110,7 +133,7 @@ const createBeltTest = async (req, res) => {
       readiness: readiness || 0,
       notes,
       certificateCode,
-      certificateFile: req.file ? `/uploads/belt-exams/${req.file.filename}` : null,
+      certificateFile: certificateFilePath,
       createdBy: req.user?.id
     });
 
@@ -173,7 +196,17 @@ const updateBeltTest = async (req, res) => {
       console.log('  - Saved as:', req.file.filename);
       console.log('  - Path:', req.file.path);
       console.log('  - Size:', req.file.size, 'bytes');
-      test.certificateFile = `/uploads/belt-exams/${req.file.filename}`;
+      
+      // Determine certificate file path
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        // Cloudinary upload - use full URL as-is
+        test.certificateFile = req.file.path;
+        console.log('☁️ Certificate uploaded to Cloudinary:', test.certificateFile);
+      } else {
+        // Local upload - use relative path WITHOUT leading slash
+        test.certificateFile = `uploads/belt-exams/${req.file.filename}`;
+        console.log('📁 Certificate uploaded locally:', test.certificateFile);
+      }
     } else {
       console.log('⚠️ No new file uploaded');
     }
@@ -284,17 +317,42 @@ const downloadCertificate = async (req, res) => {
       });
     }
 
+    console.log(`📥 Certificate file path: ${test.certificateFile}`);
+
+    // Check if file is on Cloudinary
+    if (test.certificateFile.startsWith('http://') || test.certificateFile.startsWith('https://')) {
+      // Cloudinary file - redirect to Cloudinary URL with download flag
+      console.log(`☁️ Redirecting to Cloudinary download: ${test.certificateFile}`);
+      
+      // Add fl_attachment flag to force download
+      let downloadUrl = test.certificateFile;
+      if (downloadUrl.includes('cloudinary.com')) {
+        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+      }
+      
+      return res.redirect(downloadUrl);
+    }
+
+    // Local file
     const path = require('path');
     const fs = require('fs');
-    const filePath = path.join(__dirname, '../..', test.certificateFile);
     
-    console.log(`📥 Sending file: ${filePath}`);
+    // Remove leading slash if present
+    let cleanPath = test.certificateFile.startsWith('/') 
+      ? test.certificateFile.substring(1) 
+      : test.certificateFile;
+    
+    const filePath = path.join(__dirname, '../..', cleanPath);
+    
+    console.log(`📁 Checking local file: ${filePath}`);
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.log(`❌ File not found: ${filePath}`);
       return res.status(404).json({
         status: 'error',
-        message: 'Certificate file not found on server'
+        message: 'Certificate file not found. This file was uploaded before Cloudinary integration and has been deleted. Please ask the administrator to re-upload the certificate.',
+        filePath: test.certificateFile
       });
     }
     
@@ -317,6 +375,7 @@ const downloadCertificate = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.setHeader('Content-Transfer-Encoding', 'binary');
     res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     
     console.log(`✅ Forcing download with filename: ${fileName}`);
     

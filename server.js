@@ -114,14 +114,59 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static files - serve uploads directory with CORS headers
+// Middleware to handle Cloudinary public_ids in /uploads requests
+app.use('/uploads', (req, res, next) => {
+  console.log(`📨 ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  console.log(`   Headers: ${req.headers.authorization ? 'Has Auth Token' : 'No Auth Token'}`);
+  
+  // Extract filename from URL (e.g., /uploads/students/xyz.png -> xyz.png)
+  const urlParts = req.path.split('/');
+  const filename = urlParts[urlParts.length - 1];
+  
+  console.log(`   Filename: ${filename}`);
+  
+  // Check if it's a Cloudinary public_id (short random string without timestamp pattern)
+  const hasLocalTimestampPattern = /^[a-z_]+\-\d{13}\-\d{9,10}\./i.test(filename);
+  const looksLikeCloudinaryId = filename && 
+                                 !hasLocalTimestampPattern && 
+                                 !filename.includes('\\') && 
+                                 filename.length < 50 && 
+                                 filename.length > 10; // Cloudinary IDs are typically 20-30 chars
+  
+  console.log(`   Local timestamp pattern: ${hasLocalTimestampPattern}`);
+  console.log(`   Looks like Cloudinary ID: ${looksLikeCloudinaryId}`);
+  
+  if (looksLikeCloudinaryId) {
+    // Construct Cloudinary URL
+    // req.path is like /students/xyz.png, so we need to extract the folder
+    const folder = urlParts[urlParts.length - 2]; // e.g., 'students'
+    const cloudinaryUrl = `https://res.cloudinary.com/dab7min7n/image/upload/taekwondo/${folder}/${filename}`;
+    console.log(`☁️ Detected Cloudinary public_id in static request, redirecting to: ${cloudinaryUrl}`);
+    return res.redirect(cloudinaryUrl);
+  }
+  
+  // Not a Cloudinary ID, continue to static file serving
+  console.log(`   Continuing to static file serving...`);
+  next();
+});
+
+// Static files - serve uploads directory with CORS headers and 404 handling
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
   next();
-}, express.static(path.join(__dirname, 'uploads')));
+}, express.static(path.join(__dirname, 'uploads')), (req, res) => {
+  // Custom 404 handler for missing upload files
+  console.log(`❌ File not found: ${req.originalUrl}`);
+  res.status(404).json({
+    status: 'error',
+    message: 'File not found. This file was uploaded before Cloudinary integration and has been deleted on server restart. Please re-upload the file through the admin panel to ensure permanent storage.',
+    path: req.originalUrl,
+    solution: 'Re-upload this file through the admin panel. New uploads will be stored on Cloudinary and never deleted.'
+  });
+});
 console.log('📁 Static files served from:', path.join(__dirname, 'uploads'));
 
 // Database connection

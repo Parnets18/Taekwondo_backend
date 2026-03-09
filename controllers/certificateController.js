@@ -395,7 +395,7 @@ const createCertificate = async (req, res) => {
     
     if (req.file) {
       // Check if using Cloudinary or local storage
-      if (req.file.path && req.file.path.includes('cloudinary')) {
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
         // Cloudinary upload - use the secure URL
         filePath = req.file.path; // This is the Cloudinary URL
         fileSize = req.file.size;
@@ -566,7 +566,7 @@ const updateCertificate = async (req, res) => {
       }
 
       // Save new file path
-      if (req.file.path && req.file.path.includes('cloudinary')) {
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
         // Cloudinary upload
         certificate.filePath = req.file.path;
         certificate.fileHash = crypto.createHash('sha256').update(req.file.filename).digest('hex');
@@ -728,56 +728,97 @@ const downloadCertificate = async (req, res) => {
       });
     }
 
-    // Validate file existence and accessibility
-    const fileValidation = await validateCertificateFile(certificateId, certificate.filePath);
-    if (!fileValidation.exists) {
-      console.log(`Certificate file does not exist: ${certificate.filePath}`);
+    console.log(`📥 Download request for certificate: ${certificateId}`);
+    console.log(`📁 File path: ${certificate.filePath}`);
+
+    // Check if file is on Cloudinary
+    if (certificate.filePath.startsWith('http://') || certificate.filePath.startsWith('https://')) {
+      // Cloudinary file - redirect to Cloudinary URL with download flag
+      console.log(`☁️ Redirecting to Cloudinary download: ${certificate.filePath}`);
+      
+      // Increment download count
+      try {
+        await certificate.incrementDownloadCount();
+      } catch (err) {
+        console.log('⚠️ Could not increment download count:', err.message);
+      }
+      
+      // Add fl_attachment flag to force download
+      let downloadUrl = certificate.filePath;
+      if (downloadUrl.includes('cloudinary.com')) {
+        // Insert fl_attachment before the version number
+        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+      }
+      
+      // Redirect to Cloudinary URL
+      return res.redirect(downloadUrl);
+    }
+
+    // Local file - check if it exists
+    console.log(`📁 Checking local file: ${certificate.filePath}`);
+    
+    // Try to construct the full path
+    const fullPath = path.isAbsolute(certificate.filePath) 
+      ? certificate.filePath 
+      : path.join(process.cwd(), certificate.filePath);
+    
+    console.log(`📁 Full path: ${fullPath}`);
+
+    // Check if file exists
+    try {
+      await fs.access(fullPath, fs.constants.R_OK);
+      console.log(`✅ File exists and is readable`);
+    } catch (err) {
+      console.log(`❌ File not found or not readable: ${err.message}`);
+      
+      // File doesn't exist locally - this is expected on Render after restart
+      // Return a helpful error message
       return res.status(404).json({
         status: 'error',
         code: 'FILE_NOT_FOUND',
-        message: 'Certificate file not found on server'
+        message: 'Certificate file not found. This certificate was uploaded before Cloudinary integration. Please re-upload the certificate to ensure permanent storage.',
+        details: {
+          certificateId: certificate._id,
+          verificationCode: certificate.verificationCode,
+          filePath: certificate.filePath
+        }
       });
     }
 
-    if (!fileValidation.readable) {
-      console.error(`Certificate file not readable: ${certificate.filePath}`);
-      return res.status(500).json({
-        status: 'error',
-        code: 'FILE_ACCESS_ERROR',
-        message: 'Certificate file cannot be accessed'
-      });
-    }
-
-    // Check for file corruption
-    if (fileValidation.error) {
-      console.error(`Certificate file validation error: ${fileValidation.error}`);
-      return res.status(422).json({
-        status: 'error',
-        code: 'FILE_CORRUPTED',
-        message: 'Certificate file appears to be corrupted'
-      });
-    }
-
-    // Set appropriate HTTP headers for file download
+    // File exists - serve it
+    const stats = await fs.stat(fullPath);
     const fileName = `certificate_${certificate.verificationCode}${path.extname(certificate.filePath)}`;
-    const mimeType = fileValidation.mimeType || 'application/octet-stream';
+    
+    // Determine MIME type
+    const ext = path.extname(fullPath).toLowerCase();
+    let mimeType = 'application/octet-stream';
+    switch (ext) {
+      case '.pdf': mimeType = 'application/pdf'; break;
+      case '.png': mimeType = 'image/png'; break;
+      case '.jpg':
+      case '.jpeg': mimeType = 'image/jpeg'; break;
+      case '.gif': mimeType = 'image/gif'; break;
+    }
     
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', fileValidation.size);
+    res.setHeader('Content-Length', stats.size);
     res.setHeader('Cache-Control', 'no-cache');
     
-    // Add CORS headers for frontend access
+    // Add CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length, Content-Type');
 
-    // Log successful download request
-    console.log(`Certificate download initiated: ${certificateId} by ${req.ip || 'unknown'}`);
+    console.log(`📥 Serving local file: ${fullPath}`);
     
     // Increment download count
-    await certificate.incrementDownloadCount();
+    try {
+      await certificate.incrementDownloadCount();
+    } catch (err) {
+      console.log('⚠️ Could not increment download count:', err.message);
+    }
 
     // Send file
     res.download(certificate.filePath, fileName, (err) => {

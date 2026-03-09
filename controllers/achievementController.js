@@ -103,7 +103,13 @@ exports.createAchievement = async (req, res) => {
     };
     
     if (req.file) {
-      achievementData.photo = req.file.path;
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        achievementData.photo = req.file.path;
+        console.log('☁️ Achievement photo uploaded to Cloudinary:', req.file.path);
+      } else {
+        achievementData.photo = req.file.path;
+        console.log('📁 Achievement photo uploaded locally:', req.file.path);
+      }
     }
     
     const achievement = await Achievement.create(achievementData);
@@ -155,7 +161,13 @@ exports.updateAchievement = async (req, res) => {
       if (achievement.photo && fs.existsSync(achievement.photo)) {
         fs.unlinkSync(achievement.photo);
       }
-      achievement.photo = req.file.path;
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        achievement.photo = req.file.path;
+        console.log('☁️ Achievement photo updated to Cloudinary:', req.file.path);
+      } else {
+        achievement.photo = req.file.path;
+        console.log('📁 Achievement photo updated locally:', req.file.path);
+      }
     }
     
     await achievement.save();

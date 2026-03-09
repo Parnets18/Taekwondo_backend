@@ -10,21 +10,34 @@ cloudinary.config({
 });
 
 console.log('☁️ Using Cloudinary for file uploads');
+console.log('☁️ Cloudinary config:', {
+  cloud_name: cloudinary.config().cloud_name,
+  api_key: cloudinary.config().api_key ? '***' + cloudinary.config().api_key.slice(-4) : 'NOT SET'
+});
+
+// Test Cloudinary connection
+cloudinary.api.ping()
+  .then(result => {
+    console.log('✅ Cloudinary connection successful:', result);
+  })
+  .catch(err => {
+    console.error('❌ Cloudinary connection failed:', err.message);
+    console.error('⚠️ Files will be stored locally and deleted on server restart!');
+  });
 
 // Helper to create Cloudinary storage
 const createCloudinaryStorage = (folder) => {
-  return new CloudinaryStorage({
+  const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
       folder: `taekwondo/${folder}`,
-      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'webp'],
-      resource_type: 'auto', // Automatically detect resource type
-      public_id: (req, file) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        return `${file.fieldname}-${uniqueSuffix}`;
-      }
+      resource_type: 'auto',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'webp']
     }
   });
+  
+  console.log(`☁️ Created Cloudinary storage for: ${folder}`);
+  return storage;
 };
 
 // Fallback: Helper to create local storage (for development)

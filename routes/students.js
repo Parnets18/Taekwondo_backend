@@ -121,18 +121,57 @@ router.get('/public', async (req, res) => {
 });
 
 // Download certificate endpoint (public - no auth required)
-router.get('/certificate/download/:filename', (req, res) => {
+router.get('/certificate/download/:filename', async (req, res) => {
   try {
     const filename = req.params.filename;
+    
+    console.log(`📥 Student certificate download request: ${filename}`);
+    
+    // Check if filename is actually a Cloudinary URL (encoded)
+    if (filename.startsWith('http') || filename.includes('cloudinary')) {
+      // Decode the URL
+      const decodedUrl = decodeURIComponent(filename);
+      console.log(`☁️ Redirecting to Cloudinary: ${decodedUrl}`);
+      
+      // Add fl_attachment flag to force download
+      let downloadUrl = decodedUrl;
+      if (downloadUrl.includes('cloudinary.com')) {
+        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+      }
+      
+      return res.redirect(downloadUrl);
+    }
+    
+    // Check if it's a Cloudinary public_id (short random string without timestamp pattern)
+    const hasLocalTimestampPattern = /^[a-z_]+\-\d{13}\-\d{9,10}\./i.test(filename);
+    const looksLikeCloudinaryId = !hasLocalTimestampPattern && 
+                                   !filename.includes('\\') && 
+                                   !filename.includes('/uploads/') &&
+                                   filename.length < 50; // Cloudinary IDs are typically short
+    
+    if (looksLikeCloudinaryId) {
+      // Construct Cloudinary URL
+      const cloudinaryUrl = `https://res.cloudinary.com/dab7min7n/image/upload/fl_attachment/taekwondo/students/${filename}`;
+      console.log(`☁️ Detected Cloudinary public_id, redirecting to: ${cloudinaryUrl}`);
+      return res.redirect(cloudinaryUrl);
+    }
+    
+    // Local file path
     const filePath = path.join(__dirname, '..', 'uploads', 'students', filename);
+    
+    console.log(`📁 Checking local file: ${filePath}`);
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.log(`❌ File not found: ${filePath}`);
       return res.status(404).json({
         status: 'error',
-        message: 'Certificate file not found'
+        message: 'Certificate file not found. This file was uploaded before Cloudinary integration and has been deleted. Please ask the administrator to re-upload the certificate.',
+        filename: filename
       });
     }
+    
+    console.log(`✅ Serving local file: ${filePath}`);
     
     // Set headers to force download
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -367,6 +406,17 @@ router.route('/')
     { name: 'certificate_2_3', maxCount: 1 },
     { name: 'certificate_2_4', maxCount: 1 }
   ]), createStudent);
+
+// Add logging middleware before update route
+router.use('/:id', (req, res, next) => {
+  if (req.method === 'PUT') {
+    console.log('🔔 PUT request to /api/students/:id detected');
+    console.log('   Student ID:', req.params.id);
+    console.log('   Content-Type:', req.headers['content-type']);
+    console.log('   Has files:', !!req.files);
+  }
+  next();
+});
 
 router.route('/:id')
   .get(getStudent)

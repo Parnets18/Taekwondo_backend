@@ -60,7 +60,13 @@ exports.createBanner = async (req, res) => {
     
     // Only add image if file was uploaded
     if (req.file) {
-      bannerData.image = `uploads/banners/${req.file.filename}`;
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        bannerData.image = req.file.path;
+        console.log('☁️ Banner uploaded to Cloudinary:', req.file.path);
+      } else {
+        bannerData.image = `uploads/banners/${req.file.filename}`;
+        console.log('📁 Banner uploaded locally:', bannerData.image);
+      }
     }
     
     const banner = await Banner.create(bannerData);
@@ -93,7 +99,13 @@ exports.updateBanner = async (req, res) => {
     
     // If new image is uploaded
     if (req.file) {
-      req.body.image = `uploads/banners/${req.file.filename}`;
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        req.body.image = req.file.path;
+        console.log('☁️ Banner updated to Cloudinary:', req.file.path);
+      } else {
+        req.body.image = `uploads/banners/${req.file.filename}`;
+        console.log('📁 Banner updated locally:', req.body.image);
+      }
     }
     
     const updatedBanner = await Banner.findByIdAndUpdate(

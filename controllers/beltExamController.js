@@ -9,9 +9,15 @@ const submitBeltExam = async (req, res) => {
     
     // Add photo path if file was uploaded
     if (req.file) {
+      console.log('📁 File upload details:', {
+        path: req.file.path,
+        filename: req.file.filename,
+        fieldname: req.file.fieldname
+      });
+      
       // Check if using Cloudinary or local storage
-      if (req.file.path && req.file.path.includes('cloudinary')) {
-        // Cloudinary upload - use the secure URL
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        // Cloudinary upload - use the full URL
         beltExamData.photo = req.file.path;
         console.log('☁️ Belt exam photo uploaded to Cloudinary:', req.file.path);
       } else {

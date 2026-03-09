@@ -123,7 +123,13 @@ const updateBlackBeltMember = async (req, res) => {
     member.achievements = achievements || member.achievements;
     
     if (req.file) {
-      member.photo = `uploads/black-belt/${req.file.filename}`;
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        member.photo = req.file.path;
+        console.log('☁️ Black belt photo updated to Cloudinary:', req.file.path);
+      } else {
+        member.photo = `uploads/black-belt/${req.file.filename}`;
+        console.log('📁 Black belt photo updated locally:', member.photo);
+      }
     }
     
     await member.save();

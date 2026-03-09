@@ -128,8 +128,14 @@ const updateGalleryPhoto = async (req, res) => {
           console.log(`🗑️ Deleted old photo: ${oldPhotoPath}`);
         }
       }
-      photo.photo = `uploads/gallery/${req.file.filename}`;
-      console.log(`📸 Updated photo path: ${photo.photo}`);
+      
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
+        photo.photo = req.file.path;
+        console.log('☁️ Gallery photo updated to Cloudinary:', req.file.path);
+      } else {
+        photo.photo = `uploads/gallery/${req.file.filename}`;
+        console.log('📁 Gallery photo updated locally:', photo.photo);
+      }
     }
 
     await photo.save();

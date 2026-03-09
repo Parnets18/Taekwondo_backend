@@ -1,5 +1,59 @@
 const Student = require('../models/Student');
 const bcrypt = require('bcryptjs');
+const path = require('path');
+
+// Helper function to get Cloudinary URL from file object
+const getFileUrl = (file, fileType = 'file') => {
+  if (!file) return null;
+  
+  console.log(`📎 Processing ${fileType}:`, {
+    filename: file.filename,
+    path: file.path,
+    originalname: file.originalname
+  });
+  
+  // Priority 1: Check if file.path is a full Cloudinary URL
+  if (file.path && (file.path.startsWith('http://') || file.path.startsWith('https://'))) {
+    console.log(`☁️ ${fileType} is Cloudinary full URL:`, file.path);
+    return file.path;
+  }
+  
+  // Priority 2: Check if it's a Cloudinary public_id (no timestamp pattern)
+  if (file.filename) {
+    // Cloudinary filenames are typically:
+    // - Short random strings (like "r6qkhgpx4euzgqfqzmsm")
+    // - Or folder paths (like "taekwondo/students/xyz")
+    // Local filenames have timestamp pattern: fieldname-1234567890123-123456789.ext
+    
+    const hasLocalTimestampPattern = /^[a-z_]+\-\d{13}\-\d{9,10}\./i.test(file.filename);
+    const hasWindowsPath = file.filename.includes('\\');
+    
+    if (!hasLocalTimestampPattern && !hasWindowsPath) {
+      // This is a Cloudinary public_id - construct full URL
+      // Remove any file extension from filename (Cloudinary public_ids don't have extensions)
+      const publicIdWithoutExt = file.filename.replace(/\.[^/.]+$/, '');
+      
+      // Get file extension from originalname
+      const ext = file.originalname ? path.extname(file.originalname) : '';
+      
+      // Construct public_id with folder structure
+      const publicId = publicIdWithoutExt.startsWith('taekwondo/') ? 
+                      publicIdWithoutExt : `taekwondo/students/${publicIdWithoutExt}`;
+      
+      // Construct full Cloudinary URL with extension
+      const cloudinaryUrl = `https://res.cloudinary.com/dab7min7n/image/upload/${publicId}${ext}`;
+      console.log(`☁️ ${fileType} uploaded to Cloudinary:`, cloudinaryUrl);
+      return cloudinaryUrl;
+    } else {
+      // Local file
+      console.log(`📁 ${fileType} is local file:`, file.filename);
+      return `uploads/students/${file.filename}`;
+    }
+  }
+  
+  console.log(`⚠️ No filename found for ${fileType}`);
+  return null;
+};
 
 // @desc    Get all students with filtering and pagination
 // @route   GET /api/students
@@ -337,15 +391,9 @@ const createStudent = async (req, res) => {
       address: address.trim(),
       emergencyContact: { name: '', phone: '', relationship: '' },
       currentBelt,
-      photo: req.files && req.files.photo && req.files.photo[0] ? 
-        (req.files.photo[0].path && req.files.photo[0].path.includes('cloudinary') ? 
-          req.files.photo[0].path : `uploads/students/${req.files.photo[0].filename}`) : null,
-      aadhar: req.files && req.files.aadhar && req.files.aadhar[0] ? 
-        (req.files.aadhar[0].path && req.files.aadhar[0].path.includes('cloudinary') ? 
-          req.files.aadhar[0].path : `uploads/students/${req.files.aadhar[0].filename}`) : null,
-      birthCertificate: req.files && req.files.birthCertificate && req.files.birthCertificate[0] ? 
-        (req.files.birthCertificate[0].path && req.files.birthCertificate[0].path.includes('cloudinary') ? 
-          req.files.birthCertificate[0].path : `uploads/students/${req.files.birthCertificate[0].filename}`) : null,
+      photo: req.files && req.files.photo && req.files.photo[0] ? getFileUrl(req.files.photo[0], 'photo') : null,
+      aadhar: req.files && req.files.aadhar && req.files.aadhar[0] ? getFileUrl(req.files.aadhar[0], 'aadhar') : null,
+      birthCertificate: req.files && req.files.birthCertificate && req.files.birthCertificate[0] ? getFileUrl(req.files.birthCertificate[0], 'birthCertificate') : null,
       joiningDate: new Date(joiningDate),
       admissionNumber: admissionNumber.trim(),
       feeStructure: feeStructure || {
@@ -400,15 +448,10 @@ const createStudent = async (req, res) => {
                 // Check if there's a certificate file uploaded
                 const certFileKey = `certificate_${achIndex}_${tpIndex}`;
                 if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
-                  const file = req.files[certFileKey][0];
-                  // Check if Cloudinary or local
-                  if (file.path && file.path.includes('cloudinary')) {
-                    typePrice.certificateFile = file.path;
-                  } else {
-                    typePrice.certificateFile = `uploads/students/${file.filename}`;
-                  }
+                  typePrice.certificateFile = getFileUrl(req.files[certFileKey][0], `certificate_${achIndex}_${tpIndex}`);
                 } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
                   // Keep existing certificate file path
+                  console.log(`📜 Keeping existing certificate ${achIndex}_${tpIndex}:`, tp.certificateFile);
                   typePrice.certificateFile = tp.certificateFile;
                 } else {
                   typePrice.certificateFile = '';
@@ -509,6 +552,22 @@ const updateStudent = async (req, res) => {
   try {
     console.log('📝 Update student request received for ID:', req.params.id);
     console.log('📦 Request body:', req.body);
+    console.log('📎 Request files:', req.files ? Object.keys(req.files) : 'No files');
+    
+    // Log each file in detail
+    if (req.files) {
+      Object.keys(req.files).forEach(key => {
+        console.log(`📁 File field "${key}":`, {
+          count: req.files[key].length,
+          files: req.files[key].map(f => ({
+            originalname: f.originalname,
+            filename: f.filename,
+            path: f.path,
+            size: f.size
+          }))
+        });
+      });
+    }
     
     const updates = req.body;
     
@@ -532,26 +591,17 @@ const updateStudent = async (req, res) => {
 
     // Add photo path if file was uploaded
     if (req.files && req.files.photo && req.files.photo[0]) {
-      const file = req.files.photo[0];
-      updates.photo = file.path && file.path.includes('cloudinary') ? 
-        file.path : `uploads/students/${file.filename}`;
-      console.log('📷 New photo uploaded:', updates.photo);
+      updates.photo = getFileUrl(req.files.photo[0], 'photo');
     }
 
     // Add aadhar path if file was uploaded
     if (req.files && req.files.aadhar && req.files.aadhar[0]) {
-      const file = req.files.aadhar[0];
-      updates.aadhar = file.path && file.path.includes('cloudinary') ? 
-        file.path : `uploads/students/${file.filename}`;
-      console.log('🆔 New aadhar uploaded:', updates.aadhar);
+      updates.aadhar = getFileUrl(req.files.aadhar[0], 'aadhar');
     }
 
     // Add birth certificate path if file was uploaded
     if (req.files && req.files.birthCertificate && req.files.birthCertificate[0]) {
-      const file = req.files.birthCertificate[0];
-      updates.birthCertificate = file.path && file.path.includes('cloudinary') ? 
-        file.path : `uploads/students/${file.filename}`;
-      console.log('📜 New birth certificate uploaded:', updates.birthCertificate);
+      updates.birthCertificate = getFileUrl(req.files.birthCertificate[0], 'birthCertificate');
     }
 
     // Parse achievements if it's a string
@@ -589,14 +639,13 @@ const updateStudent = async (req, res) => {
               // Check if there's a certificate file uploaded
               const certFileKey = `certificate_${achIndex}_${tpIndex}`;
               if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
-                const file = req.files[certFileKey][0];
-                // Check if Cloudinary or local
-                typePrice.certificateFile = file.path && file.path.includes('cloudinary') ? 
-                  file.path : `uploads/students/${file.filename}`;
+                typePrice.certificateFile = getFileUrl(req.files[certFileKey][0], `certificate_${achIndex}_${tpIndex}`);
               } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
                 // Keep existing certificate file path
+                console.log(`📜 Keeping existing certificate ${achIndex}_${tpIndex}:`, tp.certificateFile);
                 typePrice.certificateFile = tp.certificateFile;
               } else {
+                console.log(`📜 No certificate for ${achIndex}_${tpIndex}`);
                 typePrice.certificateFile = '';
               }
               

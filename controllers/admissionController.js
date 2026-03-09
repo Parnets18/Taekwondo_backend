@@ -10,7 +10,7 @@ const submitAdmission = async (req, res) => {
     // Add photo path if file was uploaded
     if (req.file) {
       // Check if using Cloudinary or local storage
-      if (req.file.path && req.file.path.includes('cloudinary')) {
+      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
         admissionData.photo = req.file.path;
         console.log('☁️ Admission photo uploaded to Cloudinary:', req.file.path);
       } else {

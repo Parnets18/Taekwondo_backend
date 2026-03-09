@@ -118,9 +118,13 @@ router.get('/certificates', async (req, res) => {
 // Get student's events
 router.get('/events', async (req, res) => {
   try {
-    // Get all active events
-    const events = await Event.find({ status: 'active' })
+    console.log('📅 Fetching events for student portal');
+    
+    // Get all events where isActive is true (not cancelled/deleted)
+    const events = await Event.find({ isActive: true })
       .sort({ date: -1 });
+    
+    console.log('✅ Found', events.length, 'active events');
     
     res.status(200).json({
       status: 'success',

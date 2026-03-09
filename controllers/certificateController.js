@@ -21,8 +21,33 @@ const storage = multer.diskStorage({
   }
 });
 
+// Import cloudinary config
+const { cloudinary } = require('../config/cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+// Use Cloudinary storage if configured, otherwise use local storage
+let certificateStorage;
+if (process.env.CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
+  console.log('☁️ Using Cloudinary storage for certificates');
+  certificateStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'taekwondo/certificates',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf'],
+      resource_type: 'auto',
+      public_id: (req, file) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        return `certificate-${uniqueSuffix}`;
+      }
+    }
+  });
+} else {
+  console.log('📁 Using local storage for certificates');
+  certificateStorage = storage;
+}
+
 const upload = multer({
-  storage: storage,
+  storage: certificateStorage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
@@ -209,12 +234,17 @@ const getCertificates = async (req, res) => {
     const certificatesWithImages = certificates.map(cert => {
       const certObj = cert.toObject();
       if (certObj.filePath) {
-        // Normalize path: remove any duplicate paths and use forward slashes
-        let cleanPath = certObj.filePath.replace(/\\/g, '/');
-        // Extract just the filename
-        const filename = cleanPath.split('/').pop();
-        certObj.imageUrl = `/uploads/certificates/${filename}`;
-        console.log('📄 Certificate with file:', certObj.verificationCode, '→', certObj.imageUrl);
+        // Check if it's a Cloudinary URL (starts with http/https)
+        if (certObj.filePath.startsWith('http://') || certObj.filePath.startsWith('https://')) {
+          certObj.imageUrl = certObj.filePath; // Use Cloudinary URL directly
+          console.log('☁️ Certificate with Cloudinary URL:', certObj.verificationCode, '→', certObj.imageUrl);
+        } else {
+          // Local file - normalize path
+          let cleanPath = certObj.filePath.replace(/\\/g, '/');
+          const filename = cleanPath.split('/').pop();
+          certObj.imageUrl = `/uploads/certificates/${filename}`;
+          console.log('📄 Certificate with local file:', certObj.verificationCode, '→', certObj.imageUrl);
+        }
       }
       return certObj;
     });
@@ -261,11 +291,15 @@ const getCertificateById = async (req, res) => {
 
     const certObj = certificate.toObject();
     if (certObj.filePath) {
-      // Normalize path: remove any duplicate paths and use forward slashes
-      let cleanPath = certObj.filePath.replace(/\\/g, '/');
-      // Extract just the filename
-      const filename = cleanPath.split('/').pop();
-      certObj.imageUrl = `/uploads/certificates/${filename}`;
+      // Check if it's a Cloudinary URL (starts with http/https)
+      if (certObj.filePath.startsWith('http://') || certObj.filePath.startsWith('https://')) {
+        certObj.imageUrl = certObj.filePath; // Use Cloudinary URL directly
+      } else {
+        // Local file - normalize path
+        let cleanPath = certObj.filePath.replace(/\\/g, '/');
+        const filename = cleanPath.split('/').pop();
+        certObj.imageUrl = `/uploads/certificates/${filename}`;
+      }
     }
 
     res.json({
@@ -360,22 +394,36 @@ const createCertificate = async (req, res) => {
     console.log('📁 req.file exists:', !!req.file);
     
     if (req.file) {
-      // Normalize path: use forward slashes and construct clean path
-      const filename = req.file.filename;
-      filePath = `uploads/certificates/${filename}`;
-      
-      // Read file for hash using the actual file system path
-      const actualFilePath = req.file.path;
-      const fileBuffer = await fs.readFile(actualFilePath);
-      fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
-      fileSize = req.file.size;
-      console.log('📁 File uploaded successfully:', {
-        originalName: req.file.originalname,
-        size: fileSize,
-        storedPath: filePath,
-        actualPath: actualFilePath,
-        filename: filename
-      });
+      // Check if using Cloudinary or local storage
+      if (req.file.path && req.file.path.includes('cloudinary')) {
+        // Cloudinary upload - use the secure URL
+        filePath = req.file.path; // This is the Cloudinary URL
+        fileSize = req.file.size;
+        fileHash = crypto.createHash('sha256').update(req.file.filename).digest('hex');
+        console.log('☁️ File uploaded to Cloudinary:', {
+          originalName: req.file.originalname,
+          size: fileSize,
+          cloudinaryUrl: filePath,
+          publicId: req.file.filename
+        });
+      } else {
+        // Local upload - normalize path
+        const filename = req.file.filename;
+        filePath = `uploads/certificates/${filename}`;
+        
+        // Read file for hash using the actual file system path
+        const actualFilePath = req.file.path;
+        const fileBuffer = await fs.readFile(actualFilePath);
+        fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+        fileSize = req.file.size;
+        console.log('📁 File uploaded locally:', {
+          originalName: req.file.originalname,
+          size: fileSize,
+          storedPath: filePath,
+          actualPath: actualFilePath,
+          filename: filename
+        });
+      }
     } else {
       console.log('⚠️ WARNING: No file was uploaded! req.file is undefined');
       console.log('⚠️ This means multer did not receive the file');
@@ -496,24 +544,43 @@ const updateCertificate = async (req, res) => {
       // Delete old file if exists
       if (certificate.filePath) {
         try {
-          // Construct actual file path for deletion
-          const oldFilePath = certificate.filePath.replace(/\\/g, '/');
-          const oldFilename = oldFilePath.split('/').pop();
-          const actualOldPath = path.join('uploads', 'certificates', oldFilename);
-          await fs.unlink(actualOldPath);
+          // Check if old file is on Cloudinary
+          if (certificate.filePath.startsWith('http://') || certificate.filePath.startsWith('https://')) {
+            // Extract public_id from Cloudinary URL and delete
+            const urlParts = certificate.filePath.split('/');
+            const publicIdWithExt = urlParts.slice(-2).join('/'); // folder/filename
+            const publicId = publicIdWithExt.split('.')[0]; // Remove extension
+            await cloudinary.uploader.destroy(publicId);
+            console.log('☁️ Deleted old file from Cloudinary:', publicId);
+          } else {
+            // Delete local file
+            const oldFilePath = certificate.filePath.replace(/\\/g, '/');
+            const oldFilename = oldFilePath.split('/').pop();
+            const actualOldPath = path.join('uploads', 'certificates', oldFilename);
+            await fs.unlink(actualOldPath);
+            console.log('📁 Deleted old local file:', actualOldPath);
+          }
         } catch (err) {
-          console.log('Old file not found or already deleted');
+          console.log('⚠️ Old file not found or already deleted:', err.message);
         }
       }
 
-      // Normalize path: use forward slashes and construct clean path
-      const filename = req.file.filename;
-      certificate.filePath = `uploads/certificates/${filename}`;
-      
-      // Read file for hash using the actual file system path
-      const fileBuffer = await fs.readFile(req.file.path);
-      certificate.fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
-      certificate.metadata.fileSize = req.file.size;
+      // Save new file path
+      if (req.file.path && req.file.path.includes('cloudinary')) {
+        // Cloudinary upload
+        certificate.filePath = req.file.path;
+        certificate.fileHash = crypto.createHash('sha256').update(req.file.filename).digest('hex');
+        certificate.metadata.fileSize = req.file.size;
+        console.log('☁️ Updated with Cloudinary file:', req.file.path);
+      } else {
+        // Local upload
+        const filename = req.file.filename;
+        certificate.filePath = `uploads/certificates/${filename}`;
+        const fileBuffer = await fs.readFile(req.file.path);
+        certificate.fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+        certificate.metadata.fileSize = req.file.size;
+        console.log('📁 Updated with local file:', certificate.filePath);
+      }
     }
 
     await certificate.save();
@@ -523,11 +590,15 @@ const updateCertificate = async (req, res) => {
 
     const certObj = updatedCertificate.toObject();
     if (certObj.filePath) {
-      // Normalize path: remove any duplicate paths and use forward slashes
-      let cleanPath = certObj.filePath.replace(/\\/g, '/');
-      // Extract just the filename
-      const filename = cleanPath.split('/').pop();
-      certObj.imageUrl = `/uploads/certificates/${filename}`;
+      // Check if it's a Cloudinary URL
+      if (certObj.filePath.startsWith('http://') || certObj.filePath.startsWith('https://')) {
+        certObj.imageUrl = certObj.filePath;
+      } else {
+        // Local file
+        let cleanPath = certObj.filePath.replace(/\\/g, '/');
+        const filename = cleanPath.split('/').pop();
+        certObj.imageUrl = `/uploads/certificates/${filename}`;
+      }
     }
 
     res.json({
@@ -558,13 +629,24 @@ const deleteCertificate = async (req, res) => {
     // Delete file if exists
     if (certificate.filePath) {
       try {
-        // Construct actual file path for deletion
-        const cleanPath = certificate.filePath.replace(/\\/g, '/');
-        const filename = cleanPath.split('/').pop();
-        const actualPath = path.join('uploads', 'certificates', filename);
-        await fs.unlink(actualPath);
+        // Check if file is on Cloudinary
+        if (certificate.filePath.startsWith('http://') || certificate.filePath.startsWith('https://')) {
+          // Extract public_id from Cloudinary URL and delete
+          const urlParts = certificate.filePath.split('/');
+          const publicIdWithExt = urlParts.slice(-2).join('/'); // folder/filename
+          const publicId = publicIdWithExt.split('.')[0]; // Remove extension
+          await cloudinary.uploader.destroy(publicId);
+          console.log('☁️ Deleted file from Cloudinary:', publicId);
+        } else {
+          // Delete local file
+          const cleanPath = certificate.filePath.replace(/\\/g, '/');
+          const filename = cleanPath.split('/').pop();
+          const actualPath = path.join('uploads', 'certificates', filename);
+          await fs.unlink(actualPath);
+          console.log('📁 Deleted local file:', actualPath);
+        }
       } catch (err) {
-        console.log('File not found or already deleted');
+        console.log('⚠️ File not found or already deleted:', err.message);
       }
     }
 

@@ -7,9 +7,18 @@ const submitBeltExam = async (req, res) => {
   try {
     const beltExamData = req.body;
     
-    // Add photo path if file was uploaded (store only relative path)
+    // Add photo path if file was uploaded
     if (req.file) {
-      beltExamData.photo = `uploads/belt-exams/${req.file.filename}`;
+      // Check if using Cloudinary or local storage
+      if (req.file.path && req.file.path.includes('cloudinary')) {
+        // Cloudinary upload - use the secure URL
+        beltExamData.photo = req.file.path;
+        console.log('☁️ Belt exam photo uploaded to Cloudinary:', req.file.path);
+      } else {
+        // Local upload - store relative path
+        beltExamData.photo = `uploads/belt-exams/${req.file.filename}`;
+        console.log('📁 Belt exam photo uploaded locally:', beltExamData.photo);
+      }
     }
     
     console.log('📝 Received belt exam data:', JSON.stringify(beltExamData, null, 2));

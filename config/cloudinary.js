@@ -1,12 +1,34 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Using local multer storage
-console.log('✅ Using local multer storage for file uploads');
+// Configure Cloudinary
+cloudinary.config({
+  cloudinary_url: process.env.CLOUDINARY_URL || 'cloudinary://643421246195385:CIQxcJWYCotF9BaCxvk5InZ_YJE@dab7min7n'
+});
 
-// Helper to create local storage
-const createStorage = (folder) => {
+console.log('☁️ Using Cloudinary for file uploads');
+
+// Helper to create Cloudinary storage
+const createCloudinaryStorage = (folder) => {
+  return new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: `taekwondo/${folder}`,
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'webp'],
+      resource_type: 'auto', // Automatically detect resource type
+      public_id: (req, file) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        return `${file.fieldname}-${uniqueSuffix}`;
+      }
+    }
+  });
+};
+
+// Fallback: Helper to create local storage (for development)
+const createLocalStorage = (folder) => {
   return multer.diskStorage({
     destination: (req, file, cb) => {
       const uploadDir = path.join(__dirname, '..', 'uploads', folder);
@@ -24,6 +46,17 @@ const createStorage = (folder) => {
       cb(null, filename);
     }
   });
+};
+
+// Use Cloudinary storage by default, fallback to local if CLOUDINARY_URL not set
+const createStorage = (folder) => {
+  if (process.env.CLOUDINARY_URL || process.env.CLOUDINARY_CLOUD_NAME) {
+    console.log(`☁️ Using Cloudinary storage for: ${folder}`);
+    return createCloudinaryStorage(folder);
+  } else {
+    console.log(`📁 Using local storage for: ${folder}`);
+    return createLocalStorage(folder);
+  }
 };
 
 // Create upload middleware for different types
@@ -93,5 +126,6 @@ module.exports = {
   uploadCommunity,
   uploadBlackBelt,
   uploadAdmission,
-  uploadBeltExam
+  uploadBeltExam,
+  cloudinary // Export cloudinary instance for direct use
 };

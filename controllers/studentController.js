@@ -337,9 +337,15 @@ const createStudent = async (req, res) => {
       address: address.trim(),
       emergencyContact: { name: '', phone: '', relationship: '' },
       currentBelt,
-      photo: req.files && req.files.photo && req.files.photo[0] ? `uploads/students/${req.files.photo[0].filename}` : null,
-      aadhar: req.files && req.files.aadhar && req.files.aadhar[0] ? `uploads/students/${req.files.aadhar[0].filename}` : null,
-      birthCertificate: req.files && req.files.birthCertificate && req.files.birthCertificate[0] ? `uploads/students/${req.files.birthCertificate[0].filename}` : null,
+      photo: req.files && req.files.photo && req.files.photo[0] ? 
+        (req.files.photo[0].path && req.files.photo[0].path.includes('cloudinary') ? 
+          req.files.photo[0].path : `uploads/students/${req.files.photo[0].filename}`) : null,
+      aadhar: req.files && req.files.aadhar && req.files.aadhar[0] ? 
+        (req.files.aadhar[0].path && req.files.aadhar[0].path.includes('cloudinary') ? 
+          req.files.aadhar[0].path : `uploads/students/${req.files.aadhar[0].filename}`) : null,
+      birthCertificate: req.files && req.files.birthCertificate && req.files.birthCertificate[0] ? 
+        (req.files.birthCertificate[0].path && req.files.birthCertificate[0].path.includes('cloudinary') ? 
+          req.files.birthCertificate[0].path : `uploads/students/${req.files.birthCertificate[0].filename}`) : null,
       joiningDate: new Date(joiningDate),
       admissionNumber: admissionNumber.trim(),
       feeStructure: feeStructure || {
@@ -394,9 +400,13 @@ const createStudent = async (req, res) => {
                 // Check if there's a certificate file uploaded
                 const certFileKey = `certificate_${achIndex}_${tpIndex}`;
                 if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
-                  // Save only the relative path
                   const file = req.files[certFileKey][0];
-                  typePrice.certificateFile = `uploads/students/${file.filename}`;
+                  // Check if Cloudinary or local
+                  if (file.path && file.path.includes('cloudinary')) {
+                    typePrice.certificateFile = file.path;
+                  } else {
+                    typePrice.certificateFile = `uploads/students/${file.filename}`;
+                  }
                 } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
                   // Keep existing certificate file path
                   typePrice.certificateFile = tp.certificateFile;
@@ -522,19 +532,25 @@ const updateStudent = async (req, res) => {
 
     // Add photo path if file was uploaded
     if (req.files && req.files.photo && req.files.photo[0]) {
-      updates.photo = `uploads/students/${req.files.photo[0].filename}`;
+      const file = req.files.photo[0];
+      updates.photo = file.path && file.path.includes('cloudinary') ? 
+        file.path : `uploads/students/${file.filename}`;
       console.log('📷 New photo uploaded:', updates.photo);
     }
 
     // Add aadhar path if file was uploaded
     if (req.files && req.files.aadhar && req.files.aadhar[0]) {
-      updates.aadhar = `uploads/students/${req.files.aadhar[0].filename}`;
+      const file = req.files.aadhar[0];
+      updates.aadhar = file.path && file.path.includes('cloudinary') ? 
+        file.path : `uploads/students/${file.filename}`;
       console.log('🆔 New aadhar uploaded:', updates.aadhar);
     }
 
     // Add birth certificate path if file was uploaded
     if (req.files && req.files.birthCertificate && req.files.birthCertificate[0]) {
-      updates.birthCertificate = `uploads/students/${req.files.birthCertificate[0].filename}`;
+      const file = req.files.birthCertificate[0];
+      updates.birthCertificate = file.path && file.path.includes('cloudinary') ? 
+        file.path : `uploads/students/${file.filename}`;
       console.log('📜 New birth certificate uploaded:', updates.birthCertificate);
     }
 
@@ -573,9 +589,10 @@ const updateStudent = async (req, res) => {
               // Check if there's a certificate file uploaded
               const certFileKey = `certificate_${achIndex}_${tpIndex}`;
               if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
-                // Save only the relative path
                 const file = req.files[certFileKey][0];
-                typePrice.certificateFile = `uploads/students/${file.filename}`;
+                // Check if Cloudinary or local
+                typePrice.certificateFile = file.path && file.path.includes('cloudinary') ? 
+                  file.path : `uploads/students/${file.filename}`;
               } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
                 // Keep existing certificate file path
                 typePrice.certificateFile = tp.certificateFile;

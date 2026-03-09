@@ -112,10 +112,23 @@ router.get('/fees', async (req, res) => {
   try {
     const studentId = req.user._id;
     
-    // Get fees for this student
-    const fees = await Fee.find({ student: studentId })
-      .sort({ dueDate: -1 })
-      .populate('student', 'fullName');
+    // Get student details first
+    const student = await Student.findById(studentId);
+    
+    if (!student) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Student not found'
+      });
+    }
+    
+    console.log('📝 Getting fees for student:', student.fullName);
+    
+    // Get fees for this student using studentName (Fee model uses studentName, not student reference)
+    const fees = await Fee.find({ studentName: student.fullName })
+      .sort({ dueDate: -1 });
+    
+    console.log('📊 Found', fees.length, 'fees for', student.fullName);
     
     res.status(200).json({
       status: 'success',

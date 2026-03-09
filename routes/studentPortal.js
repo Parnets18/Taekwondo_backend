@@ -179,27 +179,33 @@ router.get('/upcoming-tests', async (req, res) => {
   try {
     const studentId = req.user._id;
     
+    console.log('📝 Getting upcoming tests for student:', studentId);
+    
     // Get student details first
     const student = await Student.findById(studentId);
     
     if (!student) {
+      console.log('❌ Student not found:', studentId);
       return res.status(404).json({
         status: 'error',
         message: 'Student not found'
       });
     }
     
-    // Get upcoming tests for this student
+    console.log('👤 Student found:', student.fullName);
+    
+    // Get all scheduled tests for this student (including past ones)
     const upcomingTests = await BeltTest.find({ 
       $or: [
         { studentId: studentId },
         { studentName: student.fullName }
       ],
-      testDate: { $gte: new Date() },
       status: 'scheduled'
     })
-      .sort({ testDate: 1 })
+      .sort({ testDate: -1 })
       .populate('studentId', 'fullName');
+    
+    console.log('📊 Found', upcomingTests.length, 'tests for', student.fullName);
     
     res.status(200).json({
       status: 'success',

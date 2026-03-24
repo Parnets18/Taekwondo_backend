@@ -149,6 +149,8 @@ const getStudents = async (req, res) => {
           admissionNumber: student.admissionNumber,
           joiningDate: student.joiningDate,
           achievements: student.achievements,
+          examWhiteBelt: student.examWhiteBelt,
+          examWhiteYellowStripe: student.examWhiteYellowStripe,
           examYellowStripe: student.examYellowStripe,
           examYellowBelt: student.examYellowBelt,
           examGreenStripe: student.examGreenStripe,
@@ -159,6 +161,14 @@ const getStudents = async (req, res) => {
           examRedBelt: student.examRedBelt,
           examBlackStripe: student.examBlackStripe,
           examBlackBelt: student.examBlackBelt,
+          examBlack2Dan: student.examBlack2Dan,
+          examBlack3Dan: student.examBlack3Dan,
+          examBlack4Dan: student.examBlack4Dan,
+          examBlack5Dan: student.examBlack5Dan,
+          examBlack6Dan: student.examBlack6Dan,
+          examBlack7Dan: student.examBlack7Dan,
+          examBlack8Dan: student.examBlack8Dan,
+          examBlack9Dan: student.examBlack9Dan,
           currentBeltLevel: student.currentBeltLevel,
           idNumber: student.idNumber,
           user: student.userId
@@ -267,6 +277,8 @@ const createStudent = async (req, res) => {
       admissionNumber,
       joiningDate,
       achievements,
+      examWhiteBelt,
+      examWhiteYellowStripe,
       examYellowStripe,
       examYellowBelt,
       examGreenStripe,
@@ -277,11 +289,17 @@ const createStudent = async (req, res) => {
       examRedBelt,
       examBlackStripe,
       examBlackBelt,
+      examBlack2Dan,
+      examBlack3Dan,
+      examBlack4Dan,
+      examBlack5Dan,
+      examBlack6Dan,
+      examBlack7Dan,
+      examBlack8Dan,
+      examBlack9Dan,
       currentBeltLevel,
       idNumber
     } = req.body;
-
-    console.log('📋 Extracted required fields:');
     console.log('  fullName:', fullName);
     console.log('  dateOfBirth:', dateOfBirth);
     console.log('  gender:', gender);
@@ -470,6 +488,8 @@ const createStudent = async (req, res) => {
     }
 
     // Add exam dates if provided
+    if (examWhiteBelt) studentData.examWhiteBelt = new Date(examWhiteBelt);
+    if (examWhiteYellowStripe) studentData.examWhiteYellowStripe = new Date(examWhiteYellowStripe);
     if (examYellowStripe) studentData.examYellowStripe = new Date(examYellowStripe);
     if (examYellowBelt) studentData.examYellowBelt = new Date(examYellowBelt);
     if (examGreenStripe) studentData.examGreenStripe = new Date(examGreenStripe);
@@ -480,6 +500,14 @@ const createStudent = async (req, res) => {
     if (examRedBelt) studentData.examRedBelt = new Date(examRedBelt);
     if (examBlackStripe) studentData.examBlackStripe = new Date(examBlackStripe);
     if (examBlackBelt) studentData.examBlackBelt = new Date(examBlackBelt);
+    if (examBlack2Dan) studentData.examBlack2Dan = new Date(examBlack2Dan);
+    if (examBlack3Dan) studentData.examBlack3Dan = new Date(examBlack3Dan);
+    if (examBlack4Dan) studentData.examBlack4Dan = new Date(examBlack4Dan);
+    if (examBlack5Dan) studentData.examBlack5Dan = new Date(examBlack5Dan);
+    if (examBlack6Dan) studentData.examBlack6Dan = new Date(examBlack6Dan);
+    if (examBlack7Dan) studentData.examBlack7Dan = new Date(examBlack7Dan);
+    if (examBlack8Dan) studentData.examBlack8Dan = new Date(examBlack8Dan);
+    if (examBlack9Dan) studentData.examBlack9Dan = new Date(examBlack9Dan);
     if (currentBeltLevel) studentData.currentBeltLevel = currentBeltLevel.trim();
     if (idNumber) studentData.idNumber = idNumber.trim();
 
@@ -606,74 +634,86 @@ const updateStudent = async (req, res) => {
 
     // Parse achievements if it's a string
     if (updates.achievements) {
-      if (typeof updates.achievements === 'string') {
-        try {
+      try {
+        if (typeof updates.achievements === 'string') {
           updates.achievements = JSON.parse(updates.achievements);
-          console.log('✅ Parsed achievements:', updates.achievements);
-        } catch (error) {
-          console.log('❌ Error parsing achievements:', error);
-          delete updates.achievements; // Remove invalid achievements
         }
-      }
       
-      // Process achievements with certificate files
-      if (Array.isArray(updates.achievements)) {
-        updates.achievements = updates.achievements.map((ach, achIndex) => {
-          const achievement = {
-            tournamentName: ach.tournamentName || '',
-            address: ach.address || '',
-            date: ach.date ? new Date(ach.date) : null,
-            type: ach.type || '',
-            prize: ach.prize || ''
-          };
+        // Process achievements with certificate files
+        if (Array.isArray(updates.achievements)) {
+          updates.achievements = updates.achievements.map((ach, achIndex) => {
+            const achievement = {
+              tournamentName: ach.tournamentName || '',
+              address: ach.address || '',
+              date: ach.date ? new Date(ach.date) : null,
+              type: ach.type || '',
+              prize: ach.prize || ''
+            };
+            
+            // Handle typePrices with certificate files
+            if (ach.typePrices && Array.isArray(ach.typePrices)) {
+              achievement.typePrices = ach.typePrices.map((tp, tpIndex) => {
+                const typePrice = {
+                  type: tp.type || '',
+                  price: tp.price || '',
+                  certificateCode: tp.certificateCode || ''
+                };
+                
+                const certFileKey = `certificate_${achIndex}_${tpIndex}`;
+                if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
+                  typePrice.certificateFile = getFileUrl(req.files[certFileKey][0], `certificate_${achIndex}_${tpIndex}`);
+                } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
+                  typePrice.certificateFile = tp.certificateFile;
+                } else {
+                  typePrice.certificateFile = '';
+                }
+                
+                return typePrice;
+              });
+            }
+            
+            return achievement;
+          });
           
-          // Handle typePrices with certificate files
-          if (ach.typePrices && Array.isArray(ach.typePrices)) {
-            achievement.typePrices = ach.typePrices.map((tp, tpIndex) => {
-              const typePrice = {
-                type: tp.type || '',
-                price: tp.price || '',
-                certificateCode: tp.certificateCode || ''
-              };
-              
-              // Check if there's a certificate file uploaded
-              const certFileKey = `certificate_${achIndex}_${tpIndex}`;
-              if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
-                typePrice.certificateFile = getFileUrl(req.files[certFileKey][0], `certificate_${achIndex}_${tpIndex}`);
-              } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
-                // Keep existing certificate file path
-                console.log(`📜 Keeping existing certificate ${achIndex}_${tpIndex}:`, tp.certificateFile);
-                typePrice.certificateFile = tp.certificateFile;
-              } else {
-                console.log(`📜 No certificate for ${achIndex}_${tpIndex}`);
-                typePrice.certificateFile = '';
-              }
-              
-              return typePrice;
-            });
+          // Filter out empty achievements
+          updates.achievements = updates.achievements.filter(ach => 
+            ach.tournamentName || ach.address || (ach.date && ach.date !== 'null') || ach.type || ach.prize ||
+            (ach.typePrices && ach.typePrices.some(tp => tp.type || tp.price))
+          );
+          
+          if (updates.achievements.length === 0) {
+            updates.achievements = [];
           }
-          
-          return achievement;
-        });
-        
-        // Filter out empty achievements
-        updates.achievements = updates.achievements.filter(ach => 
-          ach.tournamentName || ach.address || ach.date || ach.type || ach.prize
-        );
-        
-        // If all achievements are empty, set to empty array
-        if (updates.achievements.length === 0) {
-          updates.achievements = [];
         }
+      } catch (achError) {
+        console.error('❌ Error processing achievements:', achError);
+        delete updates.achievements;
+      }
+    }
+
+    // Remove currentBelt from updates if it's not a valid enum value
+    // (currentBeltLevel is a free-text field, currentBelt is the enum)
+    if (updates.currentBelt) {
+      const validBelts = [
+        'white', 'white-yellow-stripe', 'yellow', 'yellow-green-stripe',
+        'green', 'green-blue-stripe', 'blue', 'blue-red-stripe',
+        'red', 'red-black-stripe', 'black-1st', 'black-2nd', 'black-3rd',
+        'black-4th', 'black-5th', 'black-6th', 'black-7th', 'black-8th', 'black-9th'
+      ];
+      if (!validBelts.includes(updates.currentBelt)) {
+        delete updates.currentBelt;
       }
     }
 
     // Convert date strings to Date objects
     const dateFields = [
       'dateOfBirth', 'joiningDate', 'enrollmentDate',
+      'examWhiteBelt', 'examWhiteYellowStripe',
       'examYellowStripe', 'examYellowBelt', 'examGreenStripe', 'examGreenBelt',
       'examBlueStripe', 'examBlueBelt', 'examRedStripe', 'examRedBelt',
-      'examBlackStripe', 'examBlackBelt'
+      'examBlackStripe', 'examBlackBelt',
+      'examBlack2Dan', 'examBlack3Dan', 'examBlack4Dan', 'examBlack5Dan',
+      'examBlack6Dan', 'examBlack7Dan', 'examBlack8Dan', 'examBlack9Dan'
     ];
     
     dateFields.forEach(field => {
@@ -689,7 +729,7 @@ const updateStudent = async (req, res) => {
     const student = await Student.findByIdAndUpdate(
       req.params.id,
       updates,
-      { new: true, runValidators: true }
+      { new: true, runValidators: false }
     ).populate('userId', 'name email phone');
 
     if (!student) {
@@ -735,6 +775,8 @@ const updateStudent = async (req, res) => {
           admissionNumber: student.admissionNumber,
           joiningDate: student.joiningDate,
           achievements: student.achievements,
+          examWhiteBelt: student.examWhiteBelt,
+          examWhiteYellowStripe: student.examWhiteYellowStripe,
           examYellowStripe: student.examYellowStripe,
           examYellowBelt: student.examYellowBelt,
           examGreenStripe: student.examGreenStripe,
@@ -745,6 +787,14 @@ const updateStudent = async (req, res) => {
           examRedBelt: student.examRedBelt,
           examBlackStripe: student.examBlackStripe,
           examBlackBelt: student.examBlackBelt,
+          examBlack2Dan: student.examBlack2Dan,
+          examBlack3Dan: student.examBlack3Dan,
+          examBlack4Dan: student.examBlack4Dan,
+          examBlack5Dan: student.examBlack5Dan,
+          examBlack6Dan: student.examBlack6Dan,
+          examBlack7Dan: student.examBlack7Dan,
+          examBlack8Dan: student.examBlack8Dan,
+          examBlack9Dan: student.examBlack9Dan,
           currentBeltLevel: student.currentBeltLevel,
           idNumber: student.idNumber,
           updatedAt: student.updatedAt
@@ -771,7 +821,8 @@ const updateStudent = async (req, res) => {
     res.status(statusCode).json({
       status: 'error',
       message: errorMessage,
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message,
+      details: error.stack
     });
   }
 };

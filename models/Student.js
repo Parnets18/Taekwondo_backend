@@ -193,6 +193,14 @@ const studentSchema = new mongoose.Schema({
   }],
   
   // Exam Dates Details (Flattened for easier access)
+  examWhiteBelt: {
+    type: Date,
+    default: null
+  },
+  examWhiteYellowStripe: {
+    type: Date,
+    default: null
+  },
   examYellowStripe: {
     type: Date,
     default: null
@@ -233,6 +241,38 @@ const studentSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  examBlack2Dan: {
+    type: Date,
+    default: null
+  },
+  examBlack3Dan: {
+    type: Date,
+    default: null
+  },
+  examBlack4Dan: {
+    type: Date,
+    default: null
+  },
+  examBlack5Dan: {
+    type: Date,
+    default: null
+  },
+  examBlack6Dan: {
+    type: Date,
+    default: null
+  },
+  examBlack7Dan: {
+    type: Date,
+    default: null
+  },
+  examBlack8Dan: {
+    type: Date,
+    default: null
+  },
+  examBlack9Dan: {
+    type: Date,
+    default: null
+  },
   currentBeltLevel: {
     type: String,
     default: ''
@@ -245,7 +285,15 @@ const studentSchema = new mongoose.Schema({
   // Academic Information
   currentBelt: {
     type: String,
-    enum: ['white', 'yellow', 'green', 'blue', 'red', 'black-1st', 'black-2nd', 'black-3rd'],
+    enum: [
+      'white', 'white-yellow-stripe',
+      'yellow', 'yellow-green-stripe',
+      'green', 'green-blue-stripe',
+      'blue', 'blue-red-stripe',
+      'red', 'red-black-stripe',
+      'black-1st', 'black-2nd', 'black-3rd', 'black-4th',
+      'black-5th', 'black-6th', 'black-7th', 'black-8th', 'black-9th'
+    ],
     default: 'white'
   },
   enrollmentDate: {

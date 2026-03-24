@@ -77,7 +77,7 @@ const app = express();
 // app.use(cors({
 //   origin: [
 //     'http://localhost:5176',
-//     'https://taekwondo-backend-j8w4.onrender.com',
+//     'http://localhost:5000',
 //   'https://taekwon.netlify.app'
 //   ],
 //   credentials: true
@@ -126,7 +126,7 @@ app.use('/uploads', (req, res, next) => {
   console.log(`   Filename: ${filename}`);
   
   // Check if it's a Cloudinary public_id (short random string without timestamp pattern)
-  const hasLocalTimestampPattern = /^[a-z_]+\-\d{13}\-\d{9,10}\./i.test(filename);
+  const hasLocalTimestampPattern = /^[a-z_\-]+\-\d{13}\-\d+\./i.test(filename);
   const looksLikeCloudinaryId = filename && 
                                  !hasLocalTimestampPattern && 
                                  !filename.includes('\\') && 
@@ -500,6 +500,8 @@ app.use('/api/students', studentRoutes);
 app.use('/api/certificate-verification', certificateVerificationRoutes);
 app.use('/api/founders', founderRoutes);
 app.use('/api/student-portal', studentPortalRoutes);
+app.use('/api/onboarding', require('./routes/onboarding'));
+app.use('/api/techniques', require('./routes/techniques'));
 
 
 

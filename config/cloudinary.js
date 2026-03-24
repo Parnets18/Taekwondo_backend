@@ -108,8 +108,24 @@ const uploadAdmission = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 
+const uploadOnboarding = multer({
+  storage: createStorage('onboarding'),
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+const uploadTechnique = multer({
+  storage: new (require('multer-storage-cloudinary').CloudinaryStorage)({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'taekwondo/techniques',
+      resource_type: 'auto',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'avi', 'mkv'],
+    },
+  }),
+  limits: { fileSize: 100 * 1024 * 1024 },
+});
+
 const uploadBeltExam = multer({ 
-  storage: createStorage('belt-exams'),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     console.log('📎 File upload attempt:');
@@ -139,6 +155,8 @@ module.exports = {
   uploadCommunity,
   uploadBlackBelt,
   uploadAdmission,
+  uploadOnboarding,
+  uploadTechnique,
   uploadBeltExam,
-  cloudinary // Export cloudinary instance for direct use
+  cloudinary
 };

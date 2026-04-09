@@ -110,18 +110,8 @@ const createBeltTest = async (req, res) => {
         fieldname: req.file.fieldname,
         mimetype: req.file.mimetype
       });
-      
-      // Check if it's a Cloudinary upload
-      // CloudinaryStorage returns the full URL in req.file.path
-      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
-        // Cloudinary upload - use full URL as-is
-        certificateFilePath = req.file.path;
-        console.log('☁️ Certificate uploaded to Cloudinary:', certificateFilePath);
-      } else {
-        // Local upload - use relative path WITHOUT leading slash
-        certificateFilePath = `uploads/belt-exams/${req.file.filename}`;
-        console.log('📁 Certificate uploaded locally:', certificateFilePath);
-      }
+      certificateFilePath = `uploads/belt-exams/${req.file.filename}`;
+      console.log('📁 Certificate uploaded locally:', certificateFilePath);
     }
 
     const test = new BeltTest({
@@ -198,15 +188,8 @@ const updateBeltTest = async (req, res) => {
       console.log('  - Size:', req.file.size, 'bytes');
       
       // Determine certificate file path
-      if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
-        // Cloudinary upload - use full URL as-is
-        test.certificateFile = req.file.path;
-        console.log('☁️ Certificate uploaded to Cloudinary:', test.certificateFile);
-      } else {
-        // Local upload - use relative path WITHOUT leading slash
-        test.certificateFile = `uploads/belt-exams/${req.file.filename}`;
-        console.log('📁 Certificate uploaded locally:', test.certificateFile);
-      }
+      test.certificateFile = `uploads/belt-exams/${req.file.filename}`;
+      console.log('📁 Certificate uploaded locally:', test.certificateFile);
     } else {
       console.log('⚠️ No new file uploaded');
     }
@@ -319,20 +302,6 @@ const downloadCertificate = async (req, res) => {
 
     console.log(`📥 Certificate file path: ${test.certificateFile}`);
 
-    // Check if file is on Cloudinary
-    if (test.certificateFile.startsWith('http://') || test.certificateFile.startsWith('https://')) {
-      // Cloudinary file - redirect to Cloudinary URL with download flag
-      console.log(`☁️ Redirecting to Cloudinary download: ${test.certificateFile}`);
-      
-      // Add fl_attachment flag to force download
-      let downloadUrl = test.certificateFile;
-      if (downloadUrl.includes('cloudinary.com')) {
-        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
-      }
-      
-      return res.redirect(downloadUrl);
-    }
-
     // Local file
     const path = require('path');
     const fs = require('fs');
@@ -343,15 +312,13 @@ const downloadCertificate = async (req, res) => {
       : test.certificateFile;
     
     const filePath = path.join(__dirname, '../..', cleanPath);
-    
     console.log(`📁 Checking local file: ${filePath}`);
     
-    // Check if file exists
     if (!fs.existsSync(filePath)) {
       console.log(`❌ File not found: ${filePath}`);
       return res.status(404).json({
         status: 'error',
-        message: 'Certificate file not found. This file was uploaded before Cloudinary integration and has been deleted. Please ask the administrator to re-upload the certificate.',
+        message: 'Certificate file not found. Please ask the administrator to re-upload the certificate.',
         filePath: test.certificateFile
       });
     }

@@ -11,7 +11,7 @@ const {
 } = require('../controllers/studentController');
 const { protect, staffOnly, adminOnly } = require('../middleware/auth');
 const Student = require('../models/Student');
-const { uploadStudent } = require('../config/cloudinary');
+const { uploadStudent } = require('../config/upload');
 
 const router = express.Router();
 
@@ -19,6 +19,16 @@ const router = express.Router();
 router.get('/test', (req, res) => {
   console.log('📝 Students test route called');
   res.json({ status: 'success', message: 'Students routes working' });
+});
+
+// Test file upload route
+router.post('/test-upload', uploadStudent.single('file'), (req, res) => {
+  console.log('📎 Test upload - file:', req.file);
+  if (req.file) {
+    res.json({ status: 'success', file: req.file.filename, path: req.file.path });
+  } else {
+    res.json({ status: 'error', message: 'No file received' });
+  }
 });
 
 // Debug route to check student by email (temporary - remove in production)
@@ -124,58 +134,43 @@ router.get('/public', async (req, res) => {
 router.get('/certificate/download/:filename', async (req, res) => {
   try {
     const filename = req.params.filename;
-    
     console.log(`📥 Student certificate download request: ${filename}`);
-    
-    // Check if filename is actually a Cloudinary URL (encoded)
-    if (filename.startsWith('http') || filename.includes('cloudinary')) {
-      // Decode the URL
-      const decodedUrl = decodeURIComponent(filename);
-      console.log(`☁️ Redirecting to Cloudinary: ${decodedUrl}`);
-      
-      // Add fl_attachment flag to force download
-      let downloadUrl = decodedUrl;
-      if (downloadUrl.includes('cloudinary.com')) {
-        downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
-      }
-      
-      return res.redirect(downloadUrl);
-    }
-    
-    // Check if it's a Cloudinary public_id (short random string without timestamp pattern)
-    const hasLocalTimestampPattern = /^[a-z_]+\-\d{13}\-\d{9,10}\./i.test(filename);
-    const looksLikeCloudinaryId = !hasLocalTimestampPattern && 
-                                   !filename.includes('\\') && 
-                                   !filename.includes('/uploads/') &&
-                                   filename.length < 50; // Cloudinary IDs are typically short
-    
-    if (looksLikeCloudinaryId) {
-      // Construct Cloudinary URL
-      const cloudinaryUrl = `https://res.cloudinary.com/dab7min7n/image/upload/fl_attachment/taekwondo/students/${filename}`;
-      console.log(`☁️ Detected Cloudinary public_id, redirecting to: ${cloudinaryUrl}`);
-      return res.redirect(cloudinaryUrl);
-    }
-    
+
     // Local file path
     const filePath = path.join(__dirname, '..', 'uploads', 'students', filename);
-    
     console.log(`📁 Checking local file: ${filePath}`);
-    
-    // Check if file exists
+
     if (!fs.existsSync(filePath)) {
       console.log(`❌ File not found: ${filePath}`);
       return res.status(404).json({
         status: 'error',
-        message: 'Certificate file not found. This file was uploaded before Cloudinary integration and has been deleted. Please ask the administrator to re-upload the certificate.',
+        message: 'Certificate file not found. Please ask the administrator to re-upload the certificate.',
         filename: filename
       });
     }
-    
+
     console.log(`✅ Serving local file: ${filePath}`);
     
-    // Set headers to force download
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', 'application/octet-stream');
+    // Determine content type
+    const ext = path.extname(filename).toLowerCase();
+    const contentTypeMap = {
+      '.pdf': 'application/pdf',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.bmp': 'image/bmp',
+      '.tiff': 'image/tiff',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+    const contentType = contentTypeMap[ext] || 'application/octet-stream';
+    
+    // Use inline for viewing in browser, attachment for forced download
+    const forceDownload = req.query.download === '1';
+    res.setHeader('Content-Disposition', `${forceDownload ? 'attachment' : 'inline'}; filename="${filename}"`);
+    res.setHeader('Content-Type', contentType);
     
     // Send file
     res.sendFile(filePath);
@@ -390,21 +385,31 @@ router.route('/')
     { name: 'photo', maxCount: 1 },
     { name: 'aadhar', maxCount: 1 },
     { name: 'birthCertificate', maxCount: 1 },
-    { name: 'certificate_0_0', maxCount: 1 },
-    { name: 'certificate_0_1', maxCount: 1 },
-    { name: 'certificate_0_2', maxCount: 1 },
-    { name: 'certificate_0_3', maxCount: 1 },
-    { name: 'certificate_0_4', maxCount: 1 },
-    { name: 'certificate_1_0', maxCount: 1 },
-    { name: 'certificate_1_1', maxCount: 1 },
-    { name: 'certificate_1_2', maxCount: 1 },
-    { name: 'certificate_1_3', maxCount: 1 },
-    { name: 'certificate_1_4', maxCount: 1 },
-    { name: 'certificate_2_0', maxCount: 1 },
-    { name: 'certificate_2_1', maxCount: 1 },
-    { name: 'certificate_2_2', maxCount: 1 },
-    { name: 'certificate_2_3', maxCount: 1 },
-    { name: 'certificate_2_4', maxCount: 1 }
+    // Achievement certificates
+    { name: 'certificate_0_0', maxCount: 1 }, { name: 'certificate_0_1', maxCount: 1 }, { name: 'certificate_0_2', maxCount: 1 }, { name: 'certificate_0_3', maxCount: 1 }, { name: 'certificate_0_4', maxCount: 1 },
+    { name: 'certificate_1_0', maxCount: 1 }, { name: 'certificate_1_1', maxCount: 1 }, { name: 'certificate_1_2', maxCount: 1 }, { name: 'certificate_1_3', maxCount: 1 }, { name: 'certificate_1_4', maxCount: 1 },
+    { name: 'certificate_2_0', maxCount: 1 }, { name: 'certificate_2_1', maxCount: 1 }, { name: 'certificate_2_2', maxCount: 1 }, { name: 'certificate_2_3', maxCount: 1 }, { name: 'certificate_2_4', maxCount: 1 },
+    // Belt exam certificates
+    { name: 'examWhiteBeltCertFile', maxCount: 1 },
+    { name: 'examWhiteYellowStripeCertFile', maxCount: 1 },
+    { name: 'examYellowBeltCertFile', maxCount: 1 },
+    { name: 'examYellowStripeCertFile', maxCount: 1 },
+    { name: 'examGreenBeltCertFile', maxCount: 1 },
+    { name: 'examGreenStripeCertFile', maxCount: 1 },
+    { name: 'examBlueBeltCertFile', maxCount: 1 },
+    { name: 'examBlueStripeCertFile', maxCount: 1 },
+    { name: 'examRedBeltCertFile', maxCount: 1 },
+    { name: 'examRedStripeCertFile', maxCount: 1 },
+    { name: 'examBlackStripeCertFile', maxCount: 1 },
+    { name: 'examBlackBeltCertFile', maxCount: 1 },
+    { name: 'examBlack2DanCertFile', maxCount: 1 },
+    { name: 'examBlack3DanCertFile', maxCount: 1 },
+    { name: 'examBlack4DanCertFile', maxCount: 1 },
+    { name: 'examBlack5DanCertFile', maxCount: 1 },
+    { name: 'examBlack6DanCertFile', maxCount: 1 },
+    { name: 'examBlack7DanCertFile', maxCount: 1 },
+    { name: 'examBlack8DanCertFile', maxCount: 1 },
+    { name: 'examBlack9DanCertFile', maxCount: 1 },
   ]), createStudent);
 
 // Add logging middleware before update route
@@ -420,26 +425,26 @@ router.use('/:id', (req, res, next) => {
 
 router.route('/:id')
   .get(getStudent)
-  .put(staffOnly, uploadStudent.fields([
-    { name: 'photo', maxCount: 1 },
-    { name: 'aadhar', maxCount: 1 },
-    { name: 'birthCertificate', maxCount: 1 },
-    { name: 'certificate_0_0', maxCount: 1 },
-    { name: 'certificate_0_1', maxCount: 1 },
-    { name: 'certificate_0_2', maxCount: 1 },
-    { name: 'certificate_0_3', maxCount: 1 },
-    { name: 'certificate_0_4', maxCount: 1 },
-    { name: 'certificate_1_0', maxCount: 1 },
-    { name: 'certificate_1_1', maxCount: 1 },
-    { name: 'certificate_1_2', maxCount: 1 },
-    { name: 'certificate_1_3', maxCount: 1 },
-    { name: 'certificate_1_4', maxCount: 1 },
-    { name: 'certificate_2_0', maxCount: 1 },
-    { name: 'certificate_2_1', maxCount: 1 },
-    { name: 'certificate_2_2', maxCount: 1 },
-    { name: 'certificate_2_3', maxCount: 1 },
-    { name: 'certificate_2_4', maxCount: 1 }
-  ]), updateStudent)
+  .put(staffOnly, (req, res, next) => {
+    console.log('🔄 PUT /:id - Content-Type:', req.headers['content-type']);
+    console.log('🔄 PUT /:id - Content-Length:', req.headers['content-length']);
+    uploadStudent.any()(req, res, (err) => {
+      if (err) {
+        console.error('❌ Multer upload error:', err.message, err.code);
+        return res.status(400).json({ status: 'error', message: `File upload error: ${err.message}` });
+      }
+      const files = Array.isArray(req.files) ? req.files : [];
+      if (files.length > 0) {
+        files.forEach(f => {
+          const exists = require('fs').existsSync(f.path);
+          console.log(`✅ File saved: ${f.fieldname} -> ${f.path} (exists: ${exists}, size: ${f.size}b)`);
+        });
+      } else {
+        console.log('⚠️ No files in this request');
+      }
+      next();
+    });
+  }, updateStudent)
   .delete(staffOnly, deleteStudent);
 
 // Download all student documents as PDF

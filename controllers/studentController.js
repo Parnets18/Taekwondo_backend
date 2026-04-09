@@ -2,7 +2,7 @@ const Student = require('../models/Student');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 
-// Helper function to get Cloudinary URL from file object
+// Helper function to get local file URL from multer file object
 const getFileUrl = (file, fileType = 'file') => {
   if (!file) return null;
   
@@ -12,43 +12,9 @@ const getFileUrl = (file, fileType = 'file') => {
     originalname: file.originalname
   });
   
-  // Priority 1: Check if file.path is a full Cloudinary URL
-  if (file.path && (file.path.startsWith('http://') || file.path.startsWith('https://'))) {
-    console.log(`☁️ ${fileType} is Cloudinary full URL:`, file.path);
-    return file.path;
-  }
-  
-  // Priority 2: Check if it's a Cloudinary public_id (no timestamp pattern)
   if (file.filename) {
-    // Cloudinary filenames are typically:
-    // - Short random strings (like "r6qkhgpx4euzgqfqzmsm")
-    // - Or folder paths (like "taekwondo/students/xyz")
-    // Local filenames have timestamp pattern: fieldname-1234567890123-123456789.ext
-    
-    const hasLocalTimestampPattern = /^[a-z_]+\-\d{13}\-\d{9,10}\./i.test(file.filename);
-    const hasWindowsPath = file.filename.includes('\\');
-    
-    if (!hasLocalTimestampPattern && !hasWindowsPath) {
-      // This is a Cloudinary public_id - construct full URL
-      // Remove any file extension from filename (Cloudinary public_ids don't have extensions)
-      const publicIdWithoutExt = file.filename.replace(/\.[^/.]+$/, '');
-      
-      // Get file extension from originalname
-      const ext = file.originalname ? path.extname(file.originalname) : '';
-      
-      // Construct public_id with folder structure
-      const publicId = publicIdWithoutExt.startsWith('taekwondo/') ? 
-                      publicIdWithoutExt : `taekwondo/students/${publicIdWithoutExt}`;
-      
-      // Construct full Cloudinary URL with extension
-      const cloudinaryUrl = `https://res.cloudinary.com/dab7min7n/image/upload/${publicId}${ext}`;
-      console.log(`☁️ ${fileType} uploaded to Cloudinary:`, cloudinaryUrl);
-      return cloudinaryUrl;
-    } else {
-      // Local file
-      console.log(`📁 ${fileType} is local file:`, file.filename);
-      return `uploads/students/${file.filename}`;
-    }
+    console.log(`📁 ${fileType} saved locally:`, file.filename);
+    return `uploads/students/${file.filename}`;
   }
   
   console.log(`⚠️ No filename found for ${fileType}`);
@@ -511,6 +477,23 @@ const createStudent = async (req, res) => {
     if (currentBeltLevel) studentData.currentBeltLevel = currentBeltLevel.trim();
     if (idNumber) studentData.idNumber = idNumber.trim();
 
+    // Belt exam certificate codes and files
+    const beltCertFields = [
+      'examWhiteBelt', 'examWhiteYellowStripe', 'examYellowBelt', 'examYellowStripe',
+      'examGreenBelt', 'examGreenStripe', 'examBlueBelt', 'examBlueStripe',
+      'examRedBelt', 'examRedStripe', 'examBlackStripe', 'examBlackBelt',
+      'examBlack2Dan', 'examBlack3Dan', 'examBlack4Dan', 'examBlack5Dan',
+      'examBlack6Dan', 'examBlack7Dan', 'examBlack8Dan', 'examBlack9Dan'
+    ];
+    beltCertFields.forEach(field => {
+      const codeKey = `${field}CertCode`;
+      const fileKey = `${field}CertFile`;
+      if (req.body[codeKey]) studentData[codeKey] = req.body[codeKey];
+      if (req.files && req.files[fileKey] && req.files[fileKey][0]) {
+        studentData[fileKey] = getFileUrl(req.files[fileKey][0], fileKey);
+      }
+    });
+
     const student = new Student(studentData);
 
     console.log('💾 Attempting to save student to database...');
@@ -579,22 +562,11 @@ const createStudent = async (req, res) => {
 const updateStudent = async (req, res) => {
   try {
     console.log('📝 Update student request received for ID:', req.params.id);
-    console.log('📦 Request body:', req.body);
-    console.log('📎 Request files:', req.files ? Object.keys(req.files) : 'No files');
-    
-    // Log each file in detail
-    if (req.files) {
-      Object.keys(req.files).forEach(key => {
-        console.log(`📁 File field "${key}":`, {
-          count: req.files[key].length,
-          files: req.files[key].map(f => ({
-            originalname: f.originalname,
-            filename: f.filename,
-            path: f.path,
-            size: f.size
-          }))
-        });
-      });
+    console.log('📦 Request body keys:', Object.keys(req.body));
+    const fileList = Array.isArray(req.files) ? req.files.map(f => `${f.fieldname}(${f.size}b) -> ${f.path}`) : 'No files';
+    console.log('📎 Request files:', fileList);
+    if (Array.isArray(req.files) && req.files.length === 0) {
+      console.log('⚠️ No files received in this request');
     }
     
     const updates = req.body;
@@ -618,18 +590,38 @@ const updateStudent = async (req, res) => {
     }
 
     // Add photo path if file was uploaded
-    if (req.files && req.files.photo && req.files.photo[0]) {
-      updates.photo = getFileUrl(req.files.photo[0], 'photo');
-    }
+    if (req.files) {
+      const findFile = (fieldname) => req.files.find(f => f.fieldname === fieldname);
+      
+      const photoFile = findFile('photo');
+      if (photoFile) updates.photo = getFileUrl(photoFile, 'photo');
 
-    // Add aadhar path if file was uploaded
-    if (req.files && req.files.aadhar && req.files.aadhar[0]) {
-      updates.aadhar = getFileUrl(req.files.aadhar[0], 'aadhar');
-    }
+      const aadharFile = findFile('aadhar');
+      if (aadharFile) updates.aadhar = getFileUrl(aadharFile, 'aadhar');
 
-    // Add birth certificate path if file was uploaded
-    if (req.files && req.files.birthCertificate && req.files.birthCertificate[0]) {
-      updates.birthCertificate = getFileUrl(req.files.birthCertificate[0], 'birthCertificate');
+      const birthCertFile = findFile('birthCertificate');
+      if (birthCertFile) updates.birthCertificate = getFileUrl(birthCertFile, 'birthCertificate');
+
+      // Belt exam certificate files
+      const beltCertFields = [
+        'examWhiteBelt', 'examWhiteYellowStripe', 'examYellowBelt', 'examYellowStripe',
+        'examGreenBelt', 'examGreenStripe', 'examBlueBelt', 'examBlueStripe',
+        'examRedBelt', 'examRedStripe', 'examBlackStripe', 'examBlackBelt',
+        'examBlack2Dan', 'examBlack3Dan', 'examBlack4Dan', 'examBlack5Dan',
+        'examBlack6Dan', 'examBlack7Dan', 'examBlack8Dan', 'examBlack9Dan'
+      ];
+      beltCertFields.forEach(field => {
+        const fileKey = `${field}CertFile`;
+        const certFile = findFile(fileKey);
+        if (certFile) updates[fileKey] = getFileUrl(certFile, fileKey);
+      });
+
+      // Achievement certificate files
+      req.files.forEach(f => {
+        if (/^certificate_\d+_\d+$/.test(f.fieldname)) {
+          // handled in achievements processing below
+        }
+      });
     }
 
     // Parse achievements if it's a string
@@ -660,8 +652,9 @@ const updateStudent = async (req, res) => {
                 };
                 
                 const certFileKey = `certificate_${achIndex}_${tpIndex}`;
-                if (req.files && req.files[certFileKey] && req.files[certFileKey][0]) {
-                  typePrice.certificateFile = getFileUrl(req.files[certFileKey][0], `certificate_${achIndex}_${tpIndex}`);
+                const certFileObj = Array.isArray(req.files) ? req.files.find(f => f.fieldname === certFileKey) : (req.files && req.files[certFileKey] && req.files[certFileKey][0]);
+                if (certFileObj) {
+                  typePrice.certificateFile = getFileUrl(certFileObj, `certificate_${achIndex}_${tpIndex}`);
                 } else if (tp.certificateFile && typeof tp.certificateFile === 'string' && !tp.certificateFile.startsWith('certificate_')) {
                   typePrice.certificateFile = tp.certificateFile;
                 } else {
@@ -797,6 +790,48 @@ const updateStudent = async (req, res) => {
           examBlack9Dan: student.examBlack9Dan,
           currentBeltLevel: student.currentBeltLevel,
           idNumber: student.idNumber,
+          // Belt cert codes
+          examWhiteBeltCertCode: student.examWhiteBeltCertCode,
+          examWhiteYellowStripeCertCode: student.examWhiteYellowStripeCertCode,
+          examYellowBeltCertCode: student.examYellowBeltCertCode,
+          examYellowStripeCertCode: student.examYellowStripeCertCode,
+          examGreenBeltCertCode: student.examGreenBeltCertCode,
+          examGreenStripeCertCode: student.examGreenStripeCertCode,
+          examBlueBeltCertCode: student.examBlueBeltCertCode,
+          examBlueStripeCertCode: student.examBlueStripeCertCode,
+          examRedBeltCertCode: student.examRedBeltCertCode,
+          examRedStripeCertCode: student.examRedStripeCertCode,
+          examBlackStripeCertCode: student.examBlackStripeCertCode,
+          examBlackBeltCertCode: student.examBlackBeltCertCode,
+          examBlack2DanCertCode: student.examBlack2DanCertCode,
+          examBlack3DanCertCode: student.examBlack3DanCertCode,
+          examBlack4DanCertCode: student.examBlack4DanCertCode,
+          examBlack5DanCertCode: student.examBlack5DanCertCode,
+          examBlack6DanCertCode: student.examBlack6DanCertCode,
+          examBlack7DanCertCode: student.examBlack7DanCertCode,
+          examBlack8DanCertCode: student.examBlack8DanCertCode,
+          examBlack9DanCertCode: student.examBlack9DanCertCode,
+          // Belt cert files
+          examWhiteBeltCertFile: student.examWhiteBeltCertFile,
+          examWhiteYellowStripeCertFile: student.examWhiteYellowStripeCertFile,
+          examYellowBeltCertFile: student.examYellowBeltCertFile,
+          examYellowStripeCertFile: student.examYellowStripeCertFile,
+          examGreenBeltCertFile: student.examGreenBeltCertFile,
+          examGreenStripeCertFile: student.examGreenStripeCertFile,
+          examBlueBeltCertFile: student.examBlueBeltCertFile,
+          examBlueStripeCertFile: student.examBlueStripeCertFile,
+          examRedBeltCertFile: student.examRedBeltCertFile,
+          examRedStripeCertFile: student.examRedStripeCertFile,
+          examBlackStripeCertFile: student.examBlackStripeCertFile,
+          examBlackBeltCertFile: student.examBlackBeltCertFile,
+          examBlack2DanCertFile: student.examBlack2DanCertFile,
+          examBlack3DanCertFile: student.examBlack3DanCertFile,
+          examBlack4DanCertFile: student.examBlack4DanCertFile,
+          examBlack5DanCertFile: student.examBlack5DanCertFile,
+          examBlack6DanCertFile: student.examBlack6DanCertFile,
+          examBlack7DanCertFile: student.examBlack7DanCertFile,
+          examBlack8DanCertFile: student.examBlack8DanCertFile,
+          examBlack9DanCertFile: student.examBlack9DanCertFile,
           updatedAt: student.updatedAt
         }
       }

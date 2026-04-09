@@ -39,6 +39,10 @@ const leadershipRoutes = require('./routes/leadership');
 const certificateVerificationRoutes = require('./routes/certificateVerification');
 const founderRoutes = require('./routes/founders');
 const studentPortalRoutes = require('./routes/studentPortal');
+const theorySyllabusRoutes = require('./routes/theorySyllabus');
+const stanceRoutes = require('./routes/stances');
+const beltSyllabusRoutes = require('./routes/beltSyllabus');
+const beltNamesRoutes = require('./routes/beltNames');
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { createDefaultAdmin } = require('./utils/createAdmin');
@@ -77,7 +81,7 @@ const app = express();
 // app.use(cors({
 //   origin: [
 //     'http://localhost:5176',
-//     'http://localhost:5000',
+//     'http://localhost:9000',
 //   'https://taekwon.netlify.app'
 //   ],
 //   credentials: true
@@ -107,6 +111,10 @@ if (process.env.NODE_ENV === 'development') {
 app.use((req, res, next) => {
   console.log(`📨 ${new Date().toISOString()} - ${req.method} ${req.path}`);
   console.log(`   Headers:`, req.headers.authorization ? 'Has Auth Token' : 'No Auth Token');
+  if (req.method === 'PUT' || req.method === 'POST') {
+    console.log(`   Content-Type: ${req.headers['content-type']}`);
+    console.log(`   Content-Length: ${req.headers['content-length']}`);
+  }
   next();
 });
 
@@ -114,43 +122,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware to handle Cloudinary public_ids in /uploads requests
-app.use('/uploads', (req, res, next) => {
-  console.log(`📨 ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
-  console.log(`   Headers: ${req.headers.authorization ? 'Has Auth Token' : 'No Auth Token'}`);
-  
-  // Extract filename from URL (e.g., /uploads/students/xyz.png -> xyz.png)
-  const urlParts = req.path.split('/');
-  const filename = urlParts[urlParts.length - 1];
-  
-  console.log(`   Filename: ${filename}`);
-  
-  // Check if it's a Cloudinary public_id (short random string without timestamp pattern)
-  const hasLocalTimestampPattern = /^[a-z_\-]+\-\d{13}\-\d+\./i.test(filename);
-  const looksLikeCloudinaryId = filename && 
-                                 !hasLocalTimestampPattern && 
-                                 !filename.includes('\\') && 
-                                 filename.length < 50 && 
-                                 filename.length > 10; // Cloudinary IDs are typically 20-30 chars
-  
-  console.log(`   Local timestamp pattern: ${hasLocalTimestampPattern}`);
-  console.log(`   Looks like Cloudinary ID: ${looksLikeCloudinaryId}`);
-  
-  if (looksLikeCloudinaryId) {
-    // Construct Cloudinary URL
-    // req.path is like /students/xyz.png, so we need to extract the folder
-    const folder = urlParts[urlParts.length - 2]; // e.g., 'students'
-    const cloudinaryUrl = `https://res.cloudinary.com/dab7min7n/image/upload/taekwondo/${folder}/${filename}`;
-    console.log(`☁️ Detected Cloudinary public_id in static request, redirecting to: ${cloudinaryUrl}`);
-    return res.redirect(cloudinaryUrl);
-  }
-  
-  // Not a Cloudinary ID, continue to static file serving
-  console.log(`   Continuing to static file serving...`);
-  next();
-});
-
-// Static files - serve uploads directory with CORS headers and 404 handling
+// Static files - serve uploads directory with CORS headers
 app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -158,13 +130,11 @@ app.use('/uploads', (req, res, next) => {
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
   next();
 }, express.static(path.join(__dirname, 'uploads')), (req, res) => {
-  // Custom 404 handler for missing upload files
   console.log(`❌ File not found: ${req.originalUrl}`);
   res.status(404).json({
     status: 'error',
-    message: 'File not found. This file was uploaded before Cloudinary integration and has been deleted on server restart. Please re-upload the file through the admin panel to ensure permanent storage.',
-    path: req.originalUrl,
-    solution: 'Re-upload this file through the admin panel. New uploads will be stored on Cloudinary and never deleted.'
+    message: 'File not found. Please re-upload the file through the admin panel.',
+    path: req.originalUrl
   });
 });
 console.log('📁 Static files served from:', path.join(__dirname, 'uploads'));
@@ -496,12 +466,29 @@ app.use('/api/about-dojang-story', aboutDojangStoryRoutes);
 app.use('/api/mentors', mentorRoutes);
 app.use('/api/leadership', leadershipRoutes);
 app.use('/api/locations', require('./routes/location'));
-app.use('/api/students', studentRoutes);
 app.use('/api/certificate-verification', certificateVerificationRoutes);
 app.use('/api/founders', founderRoutes);
 app.use('/api/student-portal', studentPortalRoutes);
+app.use('/api/theory-syllabus', theorySyllabusRoutes);
+app.use('/api/stances', stanceRoutes);
+app.use('/api/belt-syllabus', beltSyllabusRoutes);
+app.use('/api/belt-names', beltNamesRoutes);
 app.use('/api/onboarding', require('./routes/onboarding'));
+app.use('/api/body-parts', require('./routes/bodyParts'));
+app.use('/api/korean', require('./routes/korean'));
+app.use('/api/practice-suit', require('./routes/practiceSuit'));
+app.use('/api/do-jang', require('./routes/doJang'));
+app.use('/api/moral-culture', require('./routes/moralCulture'));
+app.use('/api/theory-questions', require('./routes/theoryQuestions'));
 app.use('/api/techniques', require('./routes/techniques'));
+app.use('/api/belt-content', require('./routes/beltContent'));
+app.use('/api/exercises', require('./routes/exercises'));
+app.use('/api/programs', require('./routes/programs'));
+app.use('/api/sparring', require('./routes/sparring'));
+app.use('/api/technique-divisions', require('./routes/techniqueDivisions'));
+app.use('/api/instructor-titles', require('./routes/instructorTitles'));
+app.use('/api/patterns', require('./routes/patterns'));
+app.use('/api/pattern-slides', require('./routes/patternSlides'));
 
 
 
@@ -981,5 +968,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`🔗 Local API URL: http://localhost:${PORT}/api`);
-  console.log(`🌐 Network API URL: http://192.168.1.48:${PORT}/api`);
+  console.log(`🌐 Network API URL: http://192.168.1.22:${PORT}/api`);
 });

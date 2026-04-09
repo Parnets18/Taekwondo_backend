@@ -6,6 +6,174 @@ const { validateUserRegistration, validateUserLogin } = require('../middleware/v
 
 const router = express.Router();
 
+// In-memory OTP store: { phone: { otp, expiresAt } }
+const otpStore = {};
+
+// @desc    Send OTP to phone number
+// @route   POST /api/auth/send-otp
+// @access  Public
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { phone, otp: clientOtp } = req.body;
+    if (!phone) {
+      return res.status(400).json({ status: 'error', message: 'Phone number is required' });
+    }
+
+    // Check if student exists with this phone
+    const Student = require('../models/Student');
+    const student = await Student.findOne({ phone });
+    if (!student) {
+      return res.status(404).json({ status: 'error', message: 'No student found with this phone number' });
+    }
+
+    // Use client-provided OTP or generate one
+    const otp = clientOtp || Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+    otpStore[phone] = { otp, expiresAt };
+
+    console.log(`📱 OTP for ${phone}: ${otp}`);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'OTP stored successfully',
+      data: { otp, expiresIn: 300 }
+    });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({ status: 'error', message: 'Error generating OTP' });
+  }
+});
+
+// @desc    Verify OTP and login
+// @route   POST /api/auth/verify-otp
+// @access  Public
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    if (!phone || !otp) {
+      return res.status(400).json({ status: 'error', message: 'Phone and OTP are required' });
+    }
+
+    const record = otpStore[phone];
+    if (!record) {
+      return res.status(400).json({ status: 'error', message: 'OTP not found. Please request a new one.' });
+    }
+    if (Date.now() > record.expiresAt) {
+      delete otpStore[phone];
+      return res.status(400).json({ status: 'error', message: 'OTP has expired. Please request a new one.' });
+    }
+    if (record.otp !== otp) {
+      return res.status(400).json({ status: 'error', message: 'Invalid OTP' });
+    }
+
+    // OTP valid — clear it
+    delete otpStore[phone];
+
+    const Student = require('../models/Student');
+    const student = await Student.findOne({ phone });
+    if (!student) {
+      return res.status(404).json({ status: 'error', message: 'Student not found' });
+    }
+
+    const token = jwt.sign({ id: student._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE || '7d'
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Login successful',
+      data: {
+        user: {
+          id: student._id,
+          name: student.fullName,
+          email: student.email,
+          phone: student.phone,
+          role: 'student',
+          studentId: student.studentId,
+          admissionNumber: student.admissionNumber,
+          currentBeltLevel: student.currentBeltLevel
+        },
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({ status: 'error', message: 'Error verifying OTP' });
+  }
+});
+
+// @desc    Check if phone number is registered
+// @route   POST /api/auth/check-phone
+// @access  Public
+router.post('/check-phone', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ status: 'error', message: 'Phone number is required' });
+    }
+
+    const Student = require('../models/Student');
+    const student = await Student.findOne({ phone });
+
+    if (!student) {
+      return res.status(404).json({ status: 'error', message: 'Phone number not registered' });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Phone number found',
+      data: { name: student.fullName }
+    });
+  } catch (error) {
+    console.error('Check phone error:', error);
+    res.status(500).json({ status: 'error', message: 'Server error' });
+  }
+});
+
+// @desc    Login by phone (after OTP verified on client)
+// @route   POST /api/auth/login-phone
+// @access  Public
+router.post('/login-phone', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ status: 'error', message: 'Phone number is required' });
+    }
+
+    const Student = require('../models/Student');
+    const student = await Student.findOne({ phone });
+    if (!student) {
+      return res.status(404).json({ status: 'error', message: 'Student not found' });
+    }
+
+    const token = jwt.sign({ id: student._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE || '7d'
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Login successful',
+      data: {
+        user: {
+          id: student._id,
+          name: student.fullName,
+          email: student.email,
+          phone: student.phone,
+          role: 'student',
+          studentId: student.studentId,
+          admissionNumber: student.admissionNumber,
+          currentBeltLevel: student.currentBeltLevel
+        },
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Phone login error:', error);
+    res.status(500).json({ status: 'error', message: 'Login failed' });
+  }
+});
+
 // Generate JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -133,7 +301,8 @@ router.post('/login', validateUserLogin, async (req, res) => {
               role: 'student',
               studentId: student.studentId,
               admissionNumber: student.admissionNumber,
-              currentBeltLevel: student.currentBeltLevel
+              currentBeltLevel: student.currentBeltLevel,
+              photo: student.photo || null
             },
             token
           }
@@ -225,6 +394,15 @@ router.get('/profile', protect, async (req, res) => {
       });
     } else {
       // Return full profile for User model users
+      // Try to get photo from Student model if this is a student
+      let photo = null;
+      if (user.role === 'student') {
+        try {
+          const Student = require('../models/Student');
+          const studentRecord = await Student.findOne({ email: user.email }).select('photo');
+          photo = studentRecord?.photo || null;
+        } catch (e) { /* ignore */ }
+      }
       res.status(200).json({
         status: 'success',
         data: {
@@ -236,7 +414,8 @@ router.get('/profile', protect, async (req, res) => {
             role: user.role,
             isActive: user.isActive,
             lastLogin: user.lastLogin,
-            createdAt: user.createdAt
+            createdAt: user.createdAt,
+            photo
           }
         }
       });
@@ -375,6 +554,16 @@ router.put('/change-password', protect, async (req, res) => {
       message: 'Error changing password'
     });
   }
+});
+
+// @desc    Logout user (JWT stateless - just acknowledge)
+// @route   POST /api/auth/logout
+// @access  Public
+router.post('/logout', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Logged out successfully'
+  });
 });
 
 // @desc    Verify token

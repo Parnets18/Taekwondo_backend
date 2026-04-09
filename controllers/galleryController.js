@@ -2,18 +2,35 @@ const Gallery = require('../models/Gallery');
 const fs = require('fs');
 const path = require('path');
 
-// Get all gallery photos (public)
+// Get all gallery photos (public), optional ?category= filter
 const getGalleryPhotos = async (req, res) => {
   try {
-    const photos = await Gallery.find({ isActive: true })
+    const filter = { isActive: true };
+    if (req.query.category && req.query.category !== 'All') {
+      // Match exact category OR treat missing category as 'Our Memories'
+      if (req.query.category === 'Our Memories') {
+        filter.$or = [{ category: 'Our Memories' }, { category: { $exists: false } }, { category: null }];
+      } else {
+        filter.category = req.query.category;
+      }
+    }
+
+    const photos = await Gallery.find(filter)
       .sort({ createdAt: -1 })
       .select('-__v');
+
+    // Ensure every photo has a category (backfill for old records)
+    const normalised = photos.map(p => {
+      const obj = p.toObject();
+      if (!obj.category) obj.category = 'Our Memories';
+      return obj;
+    });
 
     res.status(200).json({
       status: 'success',
       data: {
-        photos,
-        count: photos.length
+        photos: normalised,
+        count: normalised.length
       }
     });
   } catch (error) {
@@ -74,8 +91,11 @@ const createGalleryPhoto = async (req, res) => {
       const photoPath = `uploads/gallery/${file.filename}`;
       console.log(`📸 Saving gallery photo: ${photoPath}`);
 
+      // Query param is most reliable with multipart (body may not be parsed yet)
+      const category = req.query.uploadCategory || req.body.category || 'Our Memories';
       const photoData = {
         photo: photoPath,
+        category,
         uploadedBy: req.user?._id
       };
 
@@ -104,7 +124,7 @@ const createGalleryPhoto = async (req, res) => {
 // Update gallery photo (admin)
 const updateGalleryPhoto = async (req, res) => {
   try {
-    const { isActive } = req.body;
+    const { isActive, category } = req.body;
 
     const photo = await Gallery.findById(req.params.id);
 
@@ -115,8 +135,8 @@ const updateGalleryPhoto = async (req, res) => {
       });
     }
 
-    // Update active status
     if (isActive !== undefined) photo.isActive = isActive;
+    if (category) photo.category = category;
 
     // Update photo if new file uploaded
     if (req.file) {
@@ -131,7 +151,6 @@ const updateGalleryPhoto = async (req, res) => {
       
       if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
         photo.photo = req.file.path;
-        console.log('☁️ Gallery photo updated to Cloudinary:', req.file.path);
       } else {
         photo.photo = `uploads/gallery/${req.file.filename}`;
         console.log('📁 Gallery photo updated locally:', photo.photo);
@@ -167,7 +186,7 @@ const deleteGalleryPhoto = async (req, res) => {
       });
     }
 
-    // Only delete local photo file (not Cloudinary URLs)
+    // Delete local photo file
     if (photo.photo && !photo.photo.startsWith('http')) {
       const photoPath = path.join(__dirname, '..', photo.photo);
       if (fs.existsSync(photoPath)) {

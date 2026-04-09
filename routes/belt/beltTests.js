@@ -14,7 +14,7 @@ const {
 } = require('../../controllers/belt/beltTestController');
 
 const { protect, adminOnly } = require('../../middleware/auth');
-const { uploadBeltExam } = require('../../config/cloudinary');
+const { uploadBeltExam } = require('../../config/upload');
 
 console.log('📝 Belt Tests routes configured');
 

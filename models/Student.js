@@ -193,86 +193,85 @@ const studentSchema = new mongoose.Schema({
   }],
   
   // Exam Dates Details (Flattened for easier access)
-  examWhiteBelt: {
-    type: Date,
-    default: null
-  },
-  examWhiteYellowStripe: {
-    type: Date,
-    default: null
-  },
-  examYellowStripe: {
-    type: Date,
-    default: null
-  },
-  examYellowBelt: {
-    type: Date,
-    default: null
-  },
-  examGreenStripe: {
-    type: Date,
-    default: null
-  },
-  examGreenBelt: {
-    type: Date,
-    default: null
-  },
-  examBlueStripe: {
-    type: Date,
-    default: null
-  },
-  examBlueBelt: {
-    type: Date,
-    default: null
-  },
-  examRedStripe: {
-    type: Date,
-    default: null
-  },
-  examRedBelt: {
-    type: Date,
-    default: null
-  },
-  examBlackStripe: {
-    type: Date,
-    default: null
-  },
-  examBlackBelt: {
-    type: Date,
-    default: null
-  },
-  examBlack2Dan: {
-    type: Date,
-    default: null
-  },
-  examBlack3Dan: {
-    type: Date,
-    default: null
-  },
-  examBlack4Dan: {
-    type: Date,
-    default: null
-  },
-  examBlack5Dan: {
-    type: Date,
-    default: null
-  },
-  examBlack6Dan: {
-    type: Date,
-    default: null
-  },
-  examBlack7Dan: {
-    type: Date,
-    default: null
-  },
-  examBlack8Dan: {
-    type: Date,
-    default: null
-  },
-  examBlack9Dan: {
-    type: Date,
-    default: null
-  },
+  examWhiteBelt: { type: Date, default: null },
+  examWhiteBeltCertCode: { type: String, default: '' },
+  examWhiteBeltCertFile: { type: String, default: '' },
+
+  examWhiteYellowStripe: { type: Date, default: null },
+  examWhiteYellowStripeCertCode: { type: String, default: '' },
+  examWhiteYellowStripeCertFile: { type: String, default: '' },
+
+  examYellowBelt: { type: Date, default: null },
+  examYellowBeltCertCode: { type: String, default: '' },
+  examYellowBeltCertFile: { type: String, default: '' },
+
+  examYellowStripe: { type: Date, default: null },
+  examYellowStripeCertCode: { type: String, default: '' },
+  examYellowStripeCertFile: { type: String, default: '' },
+
+  examGreenBelt: { type: Date, default: null },
+  examGreenBeltCertCode: { type: String, default: '' },
+  examGreenBeltCertFile: { type: String, default: '' },
+
+  examGreenStripe: { type: Date, default: null },
+  examGreenStripeCertCode: { type: String, default: '' },
+  examGreenStripeCertFile: { type: String, default: '' },
+
+  examBlueBelt: { type: Date, default: null },
+  examBlueBeltCertCode: { type: String, default: '' },
+  examBlueBeltCertFile: { type: String, default: '' },
+
+  examBlueStripe: { type: Date, default: null },
+  examBlueStripeCertCode: { type: String, default: '' },
+  examBlueStripeCertFile: { type: String, default: '' },
+
+  examRedBelt: { type: Date, default: null },
+  examRedBeltCertCode: { type: String, default: '' },
+  examRedBeltCertFile: { type: String, default: '' },
+
+  examRedStripe: { type: Date, default: null },
+  examRedStripeCertCode: { type: String, default: '' },
+  examRedStripeCertFile: { type: String, default: '' },
+
+  examBlackStripe: { type: Date, default: null },
+  examBlackStripeCertCode: { type: String, default: '' },
+  examBlackStripeCertFile: { type: String, default: '' },
+
+  examBlackBelt: { type: Date, default: null },
+  examBlackBeltCertCode: { type: String, default: '' },
+  examBlackBeltCertFile: { type: String, default: '' },
+
+  examBlack2Dan: { type: Date, default: null },
+  examBlack2DanCertCode: { type: String, default: '' },
+  examBlack2DanCertFile: { type: String, default: '' },
+
+  examBlack3Dan: { type: Date, default: null },
+  examBlack3DanCertCode: { type: String, default: '' },
+  examBlack3DanCertFile: { type: String, default: '' },
+
+  examBlack4Dan: { type: Date, default: null },
+  examBlack4DanCertCode: { type: String, default: '' },
+  examBlack4DanCertFile: { type: String, default: '' },
+
+  examBlack5Dan: { type: Date, default: null },
+  examBlack5DanCertCode: { type: String, default: '' },
+  examBlack5DanCertFile: { type: String, default: '' },
+
+  examBlack6Dan: { type: Date, default: null },
+  examBlack6DanCertCode: { type: String, default: '' },
+  examBlack6DanCertFile: { type: String, default: '' },
+
+  examBlack7Dan: { type: Date, default: null },
+  examBlack7DanCertCode: { type: String, default: '' },
+  examBlack7DanCertFile: { type: String, default: '' },
+
+  examBlack8Dan: { type: Date, default: null },
+  examBlack8DanCertCode: { type: String, default: '' },
+  examBlack8DanCertFile: { type: String, default: '' },
+
+  examBlack9Dan: { type: Date, default: null },
+  examBlack9DanCertCode: { type: String, default: '' },
+  examBlack9DanCertFile: { type: String, default: '' },
   currentBeltLevel: {
     type: String,
     default: ''

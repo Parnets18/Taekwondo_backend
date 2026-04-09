@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bannerController = require('../../controllers/bannerController');
 const { protect, restrictTo } = require('../../middleware/auth');
-const { uploadBanner } = require('../../config/cloudinary');
+const { uploadBanner } = require('../../config/upload');
 
 // Admin routes (protected)
 router.use(protect);

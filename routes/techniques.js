@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Technique = require('../models/Technique');
 const TechniqueCategory = require('../models/TechniqueCategory');
-const { uploadTechnique } = require('../config/cloudinary');
+const { uploadTechnique } = require('../config/upload');
 
 const upload = uploadTechnique.fields([
   { name: 'image', maxCount: 1 },

@@ -123,7 +123,6 @@ const updateCommunityMember = async (req, res) => {
     if (req.file) {
       if (req.file.path && (req.file.path.startsWith('http://') || req.file.path.startsWith('https://'))) {
         member.photo = req.file.path;
-        console.log('☁️ Community photo updated to Cloudinary:', req.file.path);
       } else {
         member.photo = `uploads/community/${req.file.filename}`;
         console.log('📁 Community photo updated locally:', member.photo);

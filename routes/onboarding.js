@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const OnboardingSlide = require('../models/OnboardingSlide');
-const { uploadOnboarding } = require('../config/cloudinary');
+const { uploadOnboarding } = require('../config/upload');
 
 // GET all slides
 router.get('/', async (req, res) => {

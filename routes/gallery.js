@@ -8,7 +8,7 @@ const {
   deleteGalleryPhoto
 } = require('../controllers/galleryController');
 const { protect, authorize } = require('../middleware/auth');
-const { uploadGallery } = require('../config/cloudinary');
+const { uploadGallery } = require('../config/upload');
 
 // Public routes
 router.get('/', getGalleryPhotos);
@@ -40,7 +40,15 @@ router.post('/test-upload', uploadGallery.single('photo'), (req, res) => {
 
 // Protected routes (admin only)
 router.post('/', protect, authorize('admin'), uploadGallery.array('photos', 20), createGalleryPhoto);
-router.put('/:id', protect, authorize('admin'), uploadGallery.single('photo'), updateGalleryPhoto);
+router.put('/:id', protect, authorize('admin'), (req, res, next) => {
+  // If multipart (file upload), use multer; otherwise pass through for JSON body
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    uploadGallery.single('photo')(req, res, next);
+  } else {
+    next();
+  }
+}, updateGalleryPhoto);
 router.delete('/:id', protect, authorize('admin'), deleteGalleryPhoto);
 
 module.exports = router;

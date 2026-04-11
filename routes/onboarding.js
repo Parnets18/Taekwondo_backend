@@ -41,11 +41,25 @@ router.post('/', uploadOnboarding.single('image'), async (req, res) => {
     const { title, order } = req.body;
     const points = parsePoints(req.body);
 
+    // Convert absolute path to relative path for mobile app compatibility
+    let imagePath = null;
+    if (req.file) {
+      if (req.file.secure_url || req.file.url) {
+        // If using cloud storage (Cloudinary, etc.)
+        imagePath = req.file.secure_url || req.file.url;
+      } else if (req.file.path) {
+        // Convert absolute path to relative path
+        const path = require('path');
+        const uploadsIndex = req.file.path.indexOf('uploads');
+        imagePath = uploadsIndex !== -1 ? req.file.path.substring(uploadsIndex).replace(/\\/g, '/') : req.file.path;
+      }
+    }
+
     const slide = new OnboardingSlide({
       title,
       points,
       order: order ? Number(order) : 0,
-      image: req.file ? (req.file.path || req.file.secure_url || req.file.url) : null,
+      image: imagePath,
     });
 
     const saved = await slide.save();
@@ -63,7 +77,19 @@ router.put('/:id', uploadOnboarding.single('image'), async (req, res) => {
 
     const updates = { title, points };
     if (order !== undefined) updates.order = Number(order) || 0;
-    if (req.file) updates.image = req.file.path || req.file.secure_url || req.file.url;
+    
+    if (req.file) {
+      // Convert absolute path to relative path for mobile app compatibility
+      if (req.file.secure_url || req.file.url) {
+        // If using cloud storage (Cloudinary, etc.)
+        updates.image = req.file.secure_url || req.file.url;
+      } else if (req.file.path) {
+        // Convert absolute path to relative path
+        const path = require('path');
+        const uploadsIndex = req.file.path.indexOf('uploads');
+        updates.image = uploadsIndex !== -1 ? req.file.path.substring(uploadsIndex).replace(/\\/g, '/') : req.file.path;
+      }
+    }
 
     const slide = await OnboardingSlide.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!slide) return res.status(404).json({ message: 'Slide not found' });

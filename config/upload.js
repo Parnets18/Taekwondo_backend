@@ -131,6 +131,15 @@ module.exports = {
   uploadTheory: multer({ storage: createStorage('theory'), limits: { fileSize: 10 * 1024 * 1024 } }),
   uploadBodyPart: multer({ storage: createStorage('body-parts'), limits: { fileSize: 10 * 1024 * 1024 } }),
   uploadMoralCulture: multer({ storage: createStorage('moral-culture'), limits: { fileSize: 10 * 1024 * 1024 } }),
+  uploadPracticeSuit: multer({ 
+    storage: createStorage('practice-suit'), 
+    limits: { 
+      fileSize: 10 * 1024 * 1024,
+      files: 20,
+      fields: 50,
+      fieldSize: 2 * 1024 * 1024
+    } 
+  }),
   uploadDoJang: multer({ storage: createStorage('do-jang'), limits: { fileSize: 10 * 1024 * 1024 } }),
   uploadSparring,
 };

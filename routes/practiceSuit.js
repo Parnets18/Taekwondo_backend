@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getAll, create, update, remove } = require('../controllers/practiceSuitController');
 const { protect, authorize } = require('../middleware/auth');
-const { uploadBodyPart } = require('../config/upload');
+const { uploadPracticeSuit } = require('../config/upload');
 
-const upload = uploadBodyPart.fields([{ name: 'images', maxCount: 10 }]);
+const upload = uploadPracticeSuit.fields([{ name: 'images', maxCount: 20 }]);
 
 router.get('/',       getAll);
 router.post('/',      protect, authorize('admin'), upload, create);

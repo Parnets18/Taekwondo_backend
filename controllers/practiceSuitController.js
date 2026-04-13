@@ -10,6 +10,10 @@ const extractImages = (req, body) => {
     body.images = JSON.parse(body.existingImages);
   }
   delete body.existingImages;
+  if (body.headingPointGroups && typeof body.headingPointGroups === 'string') {
+    body.headingPointGroups = JSON.parse(body.headingPointGroups);
+  }
+  // Legacy support for old points field
   if (body.points && typeof body.points === 'string') body.points = JSON.parse(body.points);
 };
 

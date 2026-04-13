@@ -19,7 +19,15 @@ const basicTheoryContentSchema = new mongoose.Schema({
   koreanName: { type: String },
   description: { type: String },
   image: { type: String },
-  points: [pointSchema],
+  points: [pointSchema], // Keep for backward compatibility
+  headingPointGroups: [{
+    heading: { type: String, default: '' },
+    points: [{
+      text: { type: String, required: true },
+      description: { type: String, default: '' }, // Optional expandable description
+      details: [detailSectionSchema],
+    }]
+  }],
   fullDetails: [{
     title: { type: String },
     subtitle: { type: String },

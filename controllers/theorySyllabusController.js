@@ -185,6 +185,9 @@ exports.createBasicTheoryContent = async (req, res) => {
     if (body.points && typeof body.points === 'string') {
       try { body.points = JSON.parse(body.points); } catch (_) {}
     }
+    if (body.headingPointGroups && typeof body.headingPointGroups === 'string') {
+      try { body.headingPointGroups = JSON.parse(body.headingPointGroups); } catch (_) {}
+    }
     if (body.fullDetails && typeof body.fullDetails === 'string') {
       try { body.fullDetails = JSON.parse(body.fullDetails); } catch (_) {}
     }
@@ -196,6 +199,11 @@ exports.createBasicTheoryContent = async (req, res) => {
         const m = f.fieldname.match(/^pointDetail_(\d+)_(\d+)$/);
         if (m && body.points?.[m[1]]?.details?.[m[2]]) {
           body.points[m[1]].details[m[2]].image = `/uploads/theory/${f.filename}`;
+        }
+        // headingPointGroups detail section images: groupDetail_gi_pi_si
+        const gm = f.fieldname.match(/^groupDetail_(\d+)_(\d+)_(\d+)$/);
+        if (gm && body.headingPointGroups?.[gm[1]]?.points?.[gm[2]]?.details?.[gm[3]]) {
+          body.headingPointGroups[gm[1]].points[gm[2]].details[gm[3]].image = `/uploads/theory/${f.filename}`;
         }
         // fullDetails section images: fullDetail_si
         const fm = f.fieldname.match(/^fullDetail_(\d+)$/);
@@ -217,6 +225,9 @@ exports.updateBasicTheoryContent = async (req, res) => {
     if (body.points && typeof body.points === 'string') {
       try { body.points = JSON.parse(body.points); } catch (_) {}
     }
+    if (body.headingPointGroups && typeof body.headingPointGroups === 'string') {
+      try { body.headingPointGroups = JSON.parse(body.headingPointGroups); } catch (_) {}
+    }
     if (body.fullDetails && typeof body.fullDetails === 'string') {
       try { body.fullDetails = JSON.parse(body.fullDetails); } catch (_) {}
     }
@@ -227,6 +238,11 @@ exports.updateBasicTheoryContent = async (req, res) => {
         const m = f.fieldname.match(/^pointDetail_(\d+)_(\d+)$/);
         if (m && body.points?.[m[1]]?.details?.[m[2]]) {
           body.points[m[1]].details[m[2]].image = `/uploads/theory/${f.filename}`;
+        }
+        // headingPointGroups detail section images: groupDetail_gi_pi_si
+        const gm = f.fieldname.match(/^groupDetail_(\d+)_(\d+)_(\d+)$/);
+        if (gm && body.headingPointGroups?.[gm[1]]?.points?.[gm[2]]?.details?.[gm[3]]) {
+          body.headingPointGroups[gm[1]].points[gm[2]].details[gm[3]].image = `/uploads/theory/${f.filename}`;
         }
         const fm = f.fieldname.match(/^fullDetail_(\d+)$/);
         if (fm && body.fullDetails?.[fm[1]]) {

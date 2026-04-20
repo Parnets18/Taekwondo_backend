@@ -6,6 +6,13 @@ const detailSchema = new mongoose.Schema({
   points: [{ text: { type: String, default: '' } }],
 }, { _id: false });
 
+// For non-standard-list: simplified pattern entries structure
+const patternEntrySchema = new mongoose.Schema({
+  number:      { type: String, default: '' },
+  koreanTerm:  { type: String, default: '' },
+  description: { type: String, default: '' },
+}, { _id: false });
+
 // For kicks-in-patterns: each point detail has pattern entries
 const kickRowSchema = new mongoose.Schema({
   koreanTerm:  { type: String, default: '' },
@@ -19,10 +26,11 @@ const kickEntrySchema = new mongoose.Schema({
 }, { _id: false });
 
 const pointSchema = new mongoose.Schema({
-  text:        { type: String, default: '' },
-  kickEntries: { type: [kickEntrySchema], default: [] }, // used by both kicks-in-patterns AND non-standard-list
-  details:     { type: [detailSchema], default: [] },    // legacy
-  subPoints:   [{ type: mongoose.Schema.Types.Mixed }],
+  text:           { type: String, default: '' },
+  kickEntries:    { type: [kickEntrySchema], default: [] }, // used by kicks-in-patterns
+  patternEntries: { type: [patternEntrySchema], default: [] }, // used by non-standard-list
+  details:        { type: [detailSchema], default: [] },    // legacy
+  subPoints:      [{ type: mongoose.Schema.Types.Mixed }],
 }, { _id: false });
 
 const slideSchema = new mongoose.Schema({

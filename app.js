@@ -81,7 +81,7 @@ const app = express();
 // app.use(cors({
 //   origin: [
 //     'http://localhost:5176',
-//     'http://localhost:9000',
+//     'https://cwtakarnataka.com',
 //   'https://taekwon.netlify.app'
 //   ],
 //   credentials: true
@@ -95,10 +95,31 @@ app.get('/api/simple-test', (req, res) => {
   res.json({ status: 'success', message: 'Simple test route working' });
 });
 
-// Security middleware - Configure helmet to allow images
+// Security middleware - Configure helmet to allow images and external resources
 app.use(helmet({
   crossOriginResourcePolicy: false,
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "blob:",
+        "https://api.qrserver.com",
+        "https://play.google.com",
+        "https://developer.apple.com",
+        "https://cwtakarnataka.com"
+      ],
+      connectSrc: ["'self'", "https://cwtakarnataka.com"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'self'"]
+    }
+  }
 }));
 app.use(compression());
 

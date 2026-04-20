@@ -1,9 +1,15 @@
 const mongoose = require('mongoose');
 
+const titleDetailPairSchema = new mongoose.Schema({
+  title:   { type: String, default: '' },
+  details: { type: [String], default: [] },
+}, { _id: false });
+
 const routineSchema = new mongoose.Schema({
   num:     { type: Number, required: true },
   title:   { type: String, default: '' },
-  details: { type: [String], default: [] },
+  details: { type: [String], default: [] }, // Keep for backward compatibility
+  titleDetailPairs: { type: [titleDetailPairSchema], default: [] }, // New structure
 }, { _id: false });
 
 const attackSchema = new mongoose.Schema({

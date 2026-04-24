@@ -108,6 +108,8 @@ app.use(helmet({
         "'self'",
         "data:",
         "blob:",
+        "https:",
+        "http:",
         "https://api.qrserver.com",
         "https://play.google.com",
         "https://developer.apple.com",
@@ -939,6 +941,53 @@ app.get('/api/test-db', async (req, res) => {
       message: 'Database test failed',
       error: error.message,
       stack: error.stack
+    });
+  }
+});
+
+// Test program exercises endpoint directly in server.js
+app.get('/api/test-program-exercises', async (req, res) => {
+  try {
+    console.log('🧪 Test program exercises endpoint called');
+    const ProgramExercise = require('./models/ProgramExercise');
+    const Program = require('./models/Program');
+    
+    const programs = await Program.find();
+    const exercises = await ProgramExercise.find();
+    
+    console.log(`Found ${programs.length} programs and ${exercises.length} exercises`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Found ${programs.length} programs and ${exercises.length} exercises`,
+      data: {
+        programs: programs.map(p => ({
+          _id: p._id,
+          title: p.title,
+          category: p.category,
+          image: p.image
+        })),
+        exercises: exercises.map(ex => ({
+          _id: ex._id,
+          name: ex.name,
+          programId: ex.programId,
+          programTitle: ex.programTitle,
+          section: ex.section,
+          equipment: ex.equipment,
+          level: ex.level,
+          hasImage: !!ex.image,
+          hasVideo: !!ex.videoUrl,
+          image: ex.image,
+          videoUrl: ex.videoUrl
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Test program exercises error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Test failed',
+      error: error.message
     });
   }
 });

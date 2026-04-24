@@ -3,6 +3,7 @@ const router = express.Router();
 const Technique = require('../models/Technique');
 const TechniqueCategory = require('../models/TechniqueCategory');
 const { uploadTechnique } = require('../config/upload');
+const { convertPathToUrl, convertToRelativePath, transformDocumentPaths } = require('../utils/pathConverter');
 
 const upload = uploadTechnique.fields([
   { name: 'image', maxCount: 1 },
@@ -60,7 +61,13 @@ router.get('/', async (req, res) => {
     const filter = {};
     if (req.query.category) filter.category = req.query.category;
     const techniques = await Technique.find(filter).sort({ category: 1, createdAt: 1 });
-    res.json(techniques);
+    
+    // Transform file paths to URLs
+    const transformedTechniques = techniques.map(tech => 
+      transformDocumentPaths(tech, ['image', 'videoUrl'])
+    );
+    
+    res.json(transformedTechniques);
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
@@ -68,7 +75,11 @@ router.get('/:id', async (req, res) => {
   try {
     const tech = await Technique.findById(req.params.id);
     if (!tech) return res.status(404).json({ message: 'Technique not found' });
-    res.json(tech);
+    
+    // Transform file paths to URLs
+    const techObj = transformDocumentPaths(tech, ['image', 'videoUrl']);
+    
+    res.json(techObj);
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
@@ -77,16 +88,21 @@ router.post('/', upload, async (req, res) => {
     const { name, category, difficulty } = req.body;
     const imageFile = req.files?.image?.[0];
     const videoFile = req.files?.video?.[0];
+    
     const tech = new Technique({
       name, category,
       difficulty: difficulty || 'Easy',
-      videoUrl: videoFile ? (videoFile.path || videoFile.secure_url || videoFile.url) : '',
+      videoUrl: videoFile ? convertToRelativePath(videoFile.path || videoFile.secure_url || videoFile.url) : '',
       steps: parseArray(req.body, 'steps'),
       tips: parseArray(req.body, 'tips'),
-      image: imageFile ? (imageFile.path || imageFile.secure_url || imageFile.url) : null,
+      image: imageFile ? convertToRelativePath(imageFile.path || imageFile.secure_url || imageFile.url) : null,
     });
     const saved = await tech.save();
-    res.status(201).json(saved);
+    
+    // Transform paths to URLs before sending response
+    const savedObj = transformDocumentPaths(saved, ['image', 'videoUrl']);
+    
+    res.status(201).json(savedObj);
   } catch (err) { res.status(400).json({ message: err.message }); }
 });
 
@@ -101,12 +117,21 @@ router.put('/:id', upload, async (req, res) => {
       steps: parseArray(req.body, 'steps'),
       tips: parseArray(req.body, 'tips'),
     };
-    if (imageFile) updates.image = imageFile.path || imageFile.secure_url || imageFile.url;
-    if (videoFile) updates.videoUrl = videoFile.path || videoFile.secure_url || videoFile.url;
+    
+    if (imageFile) {
+      updates.image = convertToRelativePath(imageFile.path || imageFile.secure_url || imageFile.url);
+    }
+    if (videoFile) {
+      updates.videoUrl = convertToRelativePath(videoFile.path || videoFile.secure_url || videoFile.url);
+    }
 
     const tech = await Technique.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!tech) return res.status(404).json({ message: 'Technique not found' });
-    res.json(tech);
+    
+    // Transform paths to URLs before sending response
+    const techObj = transformDocumentPaths(tech, ['image', 'videoUrl']);
+    
+    res.json(techObj);
   } catch (err) { res.status(400).json({ message: err.message }); }
 });
 

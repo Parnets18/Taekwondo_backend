@@ -2,6 +2,7 @@ const Program = require('../models/Program');
 const ProgramExercise = require('../models/ProgramExercise');
 const fs = require('fs');
 const path = require('path');
+const { convertPathToUrl, convertToRelativePath, transformDocumentPaths } = require('../utils/pathConverter');
 
 // ── Programs ──────────────────────────────────────────────────────────────────
 
@@ -10,7 +11,13 @@ const getPrograms = async (req, res) => {
     const filter = { isActive: true };
     if (req.query.category) filter.category = req.query.category;
     const programs = await Program.find(filter).sort({ order: 1, createdAt: 1 });
-    res.json({ status: 'success', data: { programs } });
+    
+    // Transform file paths to URLs
+    const transformedPrograms = programs.map(program => 
+      transformDocumentPaths(program, ['image'])
+    );
+    
+    res.json({ status: 'success', data: { programs: transformedPrograms } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -20,7 +27,11 @@ const getProgram = async (req, res) => {
   try {
     const program = await Program.findById(req.params.id);
     if (!program) return res.status(404).json({ status: 'error', message: 'Program not found' });
-    res.json({ status: 'success', data: { program } });
+    
+    // Transform file paths to URLs
+    const transformedProgram = transformDocumentPaths(program, ['image']);
+    
+    res.json({ status: 'success', data: { program: transformedProgram } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -29,10 +40,14 @@ const getProgram = async (req, res) => {
 const createProgram = async (req, res) => {
   try {
     const { title, category } = req.body;
-    const image = req.file ? `uploads/programs/${req.file.filename}` : null;
+    const image = req.file ? `/uploads/programs/${req.file.filename}` : null;
     const program = new Program({ title, category, image });
     const saved = await program.save();
-    res.status(201).json({ status: 'success', data: { program: saved } });
+    
+    // Transform file paths to URLs
+    const transformedProgram = transformDocumentPaths(saved, ['image']);
+    
+    res.status(201).json({ status: 'success', data: { program: transformedProgram } });
   } catch (err) {
     res.status(400).json({ status: 'error', message: err.message });
   }
@@ -51,11 +66,15 @@ const updateProgram = async (req, res) => {
         const old = path.join(__dirname, '..', program.image);
         if (fs.existsSync(old)) fs.unlinkSync(old);
       }
-      program.image = `uploads/programs/${req.file.filename}`;
+      program.image = `/uploads/programs/${req.file.filename}`;
     }
 
     const updated = await program.save();
-    res.json({ status: 'success', data: { program: updated } });
+    
+    // Transform file paths to URLs
+    const transformedProgram = transformDocumentPaths(updated, ['image']);
+    
+    res.json({ status: 'success', data: { program: transformedProgram } });
   } catch (err) {
     res.status(400).json({ status: 'error', message: err.message });
   }
@@ -85,7 +104,13 @@ const getProgramExercises = async (req, res) => {
     if (req.query.equipment) filter.equipment = req.query.equipment;
     if (req.query.level) filter.level = req.query.level;
     const exercises = await ProgramExercise.find(filter).sort({ createdAt: 1 });
-    res.json({ status: 'success', data: { exercises } });
+    
+    // Transform file paths to URLs
+    const transformedExercises = exercises.map(exercise => 
+      transformDocumentPaths(exercise, ['image', 'videoUrl'])
+    );
+    
+    res.json({ status: 'success', data: { exercises: transformedExercises } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -95,7 +120,11 @@ const getProgramExercise = async (req, res) => {
   try {
     const exercise = await ProgramExercise.findById(req.params.id);
     if (!exercise) return res.status(404).json({ status: 'error', message: 'Exercise not found' });
-    res.json({ status: 'success', data: { exercise } });
+    
+    // Transform file paths to URLs
+    const transformedExercise = transformDocumentPaths(exercise, ['image', 'videoUrl']);
+    
+    res.json({ status: 'success', data: { exercise: transformedExercise } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -106,15 +135,19 @@ const createProgramExercise = async (req, res) => {
     const { name, section, equipment, level, programId, programTitle } = req.body;
     const steps = req.body.stepsJson ? JSON.parse(req.body.stepsJson) : [];
     const tips = req.body.tipsJson ? JSON.parse(req.body.tipsJson) : [];
-    const image = req.files?.image?.[0] ? `uploads/programs/${req.files.image[0].filename}` : null;
-    const videoUrl = req.files?.video?.[0] ? `uploads/programs/${req.files.video[0].filename}` : null;
+    const image = req.files?.image?.[0] ? `/uploads/programs/${req.files.image[0].filename}` : null;
+    const videoUrl = req.files?.video?.[0] ? `/uploads/programs/${req.files.video[0].filename}` : null;
     const exercise = new ProgramExercise({
       name, section, equipment, level: level || 'Easy',
       programId: programId || null, programTitle: programTitle || '',
       image, videoUrl, steps, tips,
     });
     const saved = await exercise.save();
-    res.status(201).json({ status: 'success', data: { exercise: saved } });
+    
+    // Transform file paths to URLs
+    const transformedExercise = transformDocumentPaths(saved, ['image', 'videoUrl']);
+    
+    res.status(201).json({ status: 'success', data: { exercise: transformedExercise } });
   } catch (err) {
     res.status(400).json({ status: 'error', message: err.message });
   }
@@ -132,15 +165,19 @@ const updateProgramExercise = async (req, res) => {
 
     if (req.files?.image?.[0]) {
       if (exercise.image) { const old = path.join(__dirname, '..', exercise.image); if (fs.existsSync(old)) fs.unlinkSync(old); }
-      exercise.image = `uploads/programs/${req.files.image[0].filename}`;
+      exercise.image = `/uploads/programs/${req.files.image[0].filename}`;
     }
     if (req.files?.video?.[0]) {
       if (exercise.videoUrl) { const old = path.join(__dirname, '..', exercise.videoUrl); if (fs.existsSync(old)) fs.unlinkSync(old); }
-      exercise.videoUrl = `uploads/programs/${req.files.video[0].filename}`;
+      exercise.videoUrl = `/uploads/programs/${req.files.video[0].filename}`;
     }
 
     const updated = await exercise.save();
-    res.json({ status: 'success', data: { exercise: updated } });
+    
+    // Transform file paths to URLs
+    const transformedExercise = transformDocumentPaths(updated, ['image', 'videoUrl']);
+    
+    res.json({ status: 'success', data: { exercise: transformedExercise } });
   } catch (err) {
     res.status(400).json({ status: 'error', message: err.message });
   }

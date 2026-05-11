@@ -52,7 +52,8 @@ exports.remove = async (req, res) => {
 
 function parseBody(raw) {
   const body = { ...raw };
-  ['headings', 'points'].forEach(key => {
+  // Parse any JSON-stringified array fields
+  ['headings', 'points', 'sections'].forEach(key => {
     if (typeof body[key] === 'string') {
       try { body[key] = JSON.parse(body[key]); } catch { body[key] = []; }
     }

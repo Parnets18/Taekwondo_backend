@@ -30,12 +30,15 @@ const getExercise = async (req, res) => {
 // CREATE
 const createExercise = async (req, res) => {
   try {
-    const { name, section, equipment, duration, beltId, beltName, level } = req.body;
+    const { name, section, equipment, duration, beltId } = req.body;
     const steps = req.body.stepsJson ? JSON.parse(req.body.stepsJson) : [];
     const tips = req.body.tipsJson ? JSON.parse(req.body.tipsJson) : [];
+    const level = req.body.levelJson ? JSON.parse(req.body.levelJson) : [];
+    const beltNames = req.body.beltNamesJson ? JSON.parse(req.body.beltNamesJson) : [];
+    const beltName = beltNames[0] || req.body.beltName || '';
     const image = req.files?.image?.[0] ? `uploads/exercises/${req.files.image[0].filename}` : null;
     const videoUrl = req.files?.video?.[0] ? `uploads/exercises/${req.files.video[0].filename}` : null;
-    const exercise = new Exercise({ name, section, equipment, level: level || 'Easy', duration, beltId: beltId || null, beltName: beltName || '', image, videoUrl, steps, tips });
+    const exercise = new Exercise({ name, section, equipment, level, duration, beltId: beltId || null, beltName, beltNames, image, videoUrl, steps, tips });
     const saved = await exercise.save();
     res.status(201).json({ status: 'success', data: { exercise: saved } });
   } catch (err) {
@@ -53,7 +56,21 @@ const updateExercise = async (req, res) => {
     if (name !== undefined) exercise.name = name;
     if (section !== undefined) exercise.section = section;
     if (equipment !== undefined) exercise.equipment = equipment;
-    if (req.body.level !== undefined) exercise.level = req.body.level;
+    if (req.body.levelJson !== undefined) {
+      exercise.level = JSON.parse(req.body.levelJson);
+      exercise.markModified('level');
+    } else if (req.body.level !== undefined) {
+      exercise.level = Array.isArray(req.body.level) ? req.body.level : [req.body.level];
+      exercise.markModified('level');
+    }
+    if (req.body.beltNamesJson !== undefined) {
+      const beltNames = JSON.parse(req.body.beltNamesJson);
+      exercise.beltNames = beltNames;
+      exercise.beltName = beltNames[0] || '';
+      exercise.markModified('beltNames');
+    } else if (req.body.beltName !== undefined) {
+      exercise.beltName = req.body.beltName;
+    }
     if (duration !== undefined) exercise.duration = duration;
     if (isActive !== undefined) exercise.isActive = isActive;
     if (req.body.beltName !== undefined) exercise.beltName = req.body.beltName;

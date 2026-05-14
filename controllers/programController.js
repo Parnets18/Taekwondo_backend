@@ -99,17 +99,20 @@ const deleteProgram = async (req, res) => {
 const getProgramExercises = async (req, res) => {
   try {
     const filter = { isActive: true };
-    if (req.query.programId) filter.programId = req.query.programId;
+    if (req.query.programId) {
+      // Match exercises that have this programId in either legacy field or new array
+      filter.$or = [
+        { programId: req.query.programId },
+        { programIds: req.query.programId },
+      ];
+    }
     if (req.query.section) filter.section = req.query.section;
     if (req.query.equipment) filter.equipment = req.query.equipment;
     if (req.query.level) filter.level = req.query.level;
     const exercises = await ProgramExercise.find(filter).sort({ createdAt: 1 });
-    
-    // Transform file paths to URLs
-    const transformedExercises = exercises.map(exercise => 
+    const transformedExercises = exercises.map(exercise =>
       transformDocumentPaths(exercise, ['image', 'videoUrl'])
     );
-    
     res.json({ status: 'success', data: { exercises: transformedExercises } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
@@ -132,14 +135,21 @@ const getProgramExercise = async (req, res) => {
 
 const createProgramExercise = async (req, res) => {
   try {
-    const { name, section, equipment, level, programId, programTitle } = req.body;
+    const { name, section, equipment, programId, programTitle } = req.body;
     const steps = req.body.stepsJson ? JSON.parse(req.body.stepsJson) : [];
     const tips = req.body.tipsJson ? JSON.parse(req.body.tipsJson) : [];
+    const level = req.body.levelJson ? JSON.parse(req.body.levelJson) : [];
+    const programIds = req.body.programIdsJson ? JSON.parse(req.body.programIdsJson) : [];
+    const programTitles = req.body.programTitlesJson ? JSON.parse(req.body.programTitlesJson) : [];
+    // Keep legacy fields for backward compat
+    const legacyProgramId = programIds[0] || programId || null;
+    const legacyProgramTitle = programTitles[0] || programTitle || '';
     const image = req.files?.image?.[0] ? `/uploads/programs/${req.files.image[0].filename}` : null;
     const videoUrl = req.files?.video?.[0] ? `/uploads/programs/${req.files.video[0].filename}` : null;
     const exercise = new ProgramExercise({
-      name, section, equipment, level: level || 'Easy',
-      programId: programId || null, programTitle: programTitle || '',
+      name, section, equipment, level,
+      programId: legacyProgramId, programTitle: legacyProgramTitle,
+      programIds, programTitles,
       image, videoUrl, steps, tips,
     });
     const saved = await exercise.save();
@@ -158,8 +168,25 @@ const updateProgramExercise = async (req, res) => {
     const exercise = await ProgramExercise.findById(req.params.id);
     if (!exercise) return res.status(404).json({ status: 'error', message: 'Exercise not found' });
 
-    const fields = ['name', 'section', 'equipment', 'level', 'programId', 'programTitle', 'isActive'];
+    const fields = ['name', 'section', 'equipment', 'programId', 'programTitle', 'isActive'];
     fields.forEach(f => { if (req.body[f] !== undefined) exercise[f] = req.body[f]; });
+    if (req.body.levelJson !== undefined) {
+      exercise.level = JSON.parse(req.body.levelJson);
+      exercise.markModified('level');
+    } else if (req.body.level !== undefined) {
+      exercise.level = Array.isArray(req.body.level) ? req.body.level : [req.body.level];
+      exercise.markModified('level');
+    }
+    if (req.body.programIdsJson !== undefined) {
+      const programIds = JSON.parse(req.body.programIdsJson);
+      const programTitles = req.body.programTitlesJson ? JSON.parse(req.body.programTitlesJson) : [];
+      exercise.programIds = programIds;
+      exercise.programTitles = programTitles;
+      exercise.programId = programIds[0] || null;
+      exercise.programTitle = programTitles[0] || '';
+      exercise.markModified('programIds');
+      exercise.markModified('programTitles');
+    }
     if (req.body.stepsJson !== undefined) exercise.steps = JSON.parse(req.body.stepsJson);
     if (req.body.tipsJson !== undefined) exercise.tips = JSON.parse(req.body.tipsJson);
 

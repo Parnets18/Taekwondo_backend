@@ -21,8 +21,7 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const body = parseBody(req.body);
-    const item = await TechniqueDivision.create(body);
+    const item = await TechniqueDivision.create(sanitize(req.body));
     res.status(201).json({ status: 'success', data: item });
   } catch (err) {
     res.status(400).json({ status: 'error', message: err.message });
@@ -31,8 +30,11 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const body = parseBody(req.body);
-    const item = await TechniqueDivision.findByIdAndUpdate(req.params.id, body, { new: true, runValidators: true });
+    const item = await TechniqueDivision.findByIdAndUpdate(
+      req.params.id,
+      sanitize(req.body),
+      { new: true, runValidators: true }
+    );
     if (!item) return res.status(404).json({ status: 'error', message: 'Not found' });
     res.json({ status: 'success', data: item });
   } catch (err) {
@@ -50,13 +52,10 @@ exports.remove = async (req, res) => {
   }
 };
 
-function parseBody(raw) {
+function sanitize(raw) {
   const body = { ...raw };
-  // Parse any JSON-stringified array fields
-  ['headings', 'points', 'sections'].forEach(key => {
-    if (typeof body[key] === 'string') {
-      try { body[key] = JSON.parse(body[key]); } catch { body[key] = []; }
-    }
-  });
+  if (typeof body.sections === 'string') {
+    try { body.sections = JSON.parse(body.sections); } catch { body.sections = []; }
+  }
   return body;
 }

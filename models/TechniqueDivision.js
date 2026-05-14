@@ -1,28 +1,49 @@
 const mongoose = require('mongoose');
 
-// Recursive nested point schema
-const pointSchema = new mongoose.Schema({
-  text:        { type: String, default: '' },
-  subPoints:   [{ type: mongoose.Schema.Types.Mixed }], // nested points
+// ▸ Sub-sub-point
+const subSubPointSchema = new mongoose.Schema({
+  text:           { type: String, default: '' },
+  detailSections: { type: Array,  default: [] },
 }, { _id: false });
 
-// Section schema: optional heading + its own points
-const sectionSchema = new mongoose.Schema({
-  heading: { type: String, default: '' },   // optional heading
+// ◦ Sub-point
+const subPointSchema = new mongoose.Schema({
+  text:           { type: String, default: '' },
+  subPoints:      { type: [subSubPointSchema], default: [] },
+  detailSections: { type: Array,  default: [] },
+}, { _id: false });
+
+// • Point
+const pointSchema = new mongoose.Schema({
+  text:           { type: String, default: '' },
+  subPoints:      { type: [subPointSchema], default: [] },
+  detailSections: { type: Array,  default: [] },
+}, { _id: false });
+
+// Heading block — one heading + its points
+const headingBlockSchema = new mongoose.Schema({
+  heading: { type: String, default: '' },
   points:  { type: [pointSchema], default: [] },
 }, { _id: false });
 
-const divisionSchema = new mongoose.Schema({
-  category:    { type: String, required: true },   // e.g. "Hand techniques"
-  title:       { type: String, required: true },   // e.g. "Attack techniques"
-  subtitle:    { type: String, default: '' },
-  description: { type: String, default: '' },
-  // New unified sections field (heading optional + points inside each section)
-  sections:    { type: [sectionSchema], default: [] },
-  // Legacy fields kept for backward compatibility
-  headings:    { type: [String], default: [] },
-  points:      { type: [pointSchema], default: [] },
-  order:       { type: Number, default: 0 },
+// Section — title, subtitle, description + multiple heading blocks
+const sectionSchema = new mongoose.Schema({
+  title:         { type: String, default: '' },
+  subtitle:      { type: String, default: '' },
+  description:   { type: String, default: '' },
+  // Legacy flat fields (kept for backward compat)
+  heading:       { type: String, default: '' },
+  points:        { type: [pointSchema], default: [] },
+  // New: multiple heading+points blocks
+  headingBlocks: { type: [headingBlockSchema], default: [] },
+}, { _id: false });
+
+// Top-level item
+const techniqueDivisionSchema = new mongoose.Schema({
+  category: { type: String, required: true, trim: true },
+  title:    { type: String, required: true, trim: true },
+  sections: { type: [sectionSchema], default: [] },
+  order:    { type: Number, default: 0 },
 }, { timestamps: true });
 
-module.exports = mongoose.model('TechniqueDivision', divisionSchema);
+module.exports = mongoose.model('TechniqueDivision', techniqueDivisionSchema);

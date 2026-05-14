@@ -122,26 +122,24 @@ function parseBody(raw, files) {
       try { 
         body[k] = JSON.parse(body[k]); 
         
-        // Convert patternEntries for non-standard-list slides
+        // For non-standard-list: kickEntries is the source of truth — always derive patternEntries from it
         if (k === 'points' && body.slide === 'non-standard-list') {
           body[k] = body[k].map(point => {
-            if (point.kickEntries && Array.isArray(point.kickEntries)) {
-              // For non-standard-list, convert kickEntries to patternEntries for mobile app compatibility
+            if (point.kickEntries && Array.isArray(point.kickEntries) && point.kickEntries.length > 0) {
               const patternEntries = [];
               point.kickEntries.forEach(entry => {
-                if (entry.rows && Array.isArray(entry.rows)) {
+                if (entry.rows && Array.isArray(entry.rows) && entry.rows.length > 0) {
                   entry.rows.forEach(row => {
                     patternEntries.push({
-                      patternName: entry.patternName || point.text || 'Unknown Pattern',
+                      patternName: entry.patternName || '',
                       number: entry.number || '',
                       koreanTerm: row.koreanTerm || '',
                       description: row.description || ''
                     });
                   });
                 } else {
-                  // Handle case where there are no rows but we still have entry data
                   patternEntries.push({
-                    patternName: entry.patternName || point.text || 'Unknown Pattern',
+                    patternName: entry.patternName || '',
                     number: entry.number || '',
                     koreanTerm: entry.koreanTerm || '',
                     description: entry.description || ''
@@ -150,21 +148,12 @@ function parseBody(raw, files) {
               });
               return {
                 ...point,
-                patternEntries: patternEntries,
-                kickEntries: point.kickEntries // Keep original for admin panel
-              };
-            } else if (point.patternEntries) {
-              // Ensure all patternEntries have pattern names
-              const updatedPatternEntries = point.patternEntries.map(entry => ({
-                ...entry,
-                patternName: entry.patternName || point.text || 'Unknown Pattern'
-              }));
-              return {
-                ...point,
-                patternEntries: updatedPatternEntries
+                patternEntries,
+                kickEntries: point.kickEntries
               };
             }
-            return point;
+            // No kickEntries — clear patternEntries too so stale data isn't kept
+            return { ...point, patternEntries: [], kickEntries: [] };
           });
         }
       } catch { 

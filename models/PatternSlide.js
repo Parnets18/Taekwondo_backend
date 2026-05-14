@@ -8,6 +8,7 @@ const detailSchema = new mongoose.Schema({
 
 // For non-standard-list: simplified pattern entries structure
 const patternEntrySchema = new mongoose.Schema({
+  patternName: { type: String, default: '' },
   number:      { type: String, default: '' },
   koreanTerm:  { type: String, default: '' },
   description: { type: String, default: '' },

@@ -182,10 +182,6 @@ const createFee = async (req, res) => {
 
     console.log('Final fee data to save:', JSON.stringify(feeData, null, 2));
 
-    // Check the Fee model schema
-    console.log('Fee model schema paths:', Object.keys(Fee.schema.paths));
-    console.log('Fee model required paths:', Fee.schema.requiredPaths());
-
     const fee = new Fee(feeData);
     console.log('Fee instance created, attempting to save...');
     console.log('Fee instance before save:', JSON.stringify(fee.toObject(), null, 2));

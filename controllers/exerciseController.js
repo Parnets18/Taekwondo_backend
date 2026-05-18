@@ -2,15 +2,73 @@ const Exercise = require('../models/Exercise');
 const fs = require('fs');
 const path = require('path');
 
-// GET all (public) — optional ?section= filter
+// GET all (public) — optional filters
 const getExercises = async (req, res) => {
   try {
-    const filter = { isActive: true };
-    if (req.query.section) filter.section = req.query.section;
-    if (req.query.equipment) filter.equipment = req.query.equipment;
-    if (req.query.beltId) filter.beltId = req.query.beltId;
-    const exercises = await Exercise.find(filter).sort({ createdAt: 1 });
-    res.json({ status: 'success', data: { exercises } });
+    const Technique = require('../models/Technique');
+    const { section, equipment, beltId, beltName } = req.query;
+
+    // Helper: build belt match for both legacy and array fields
+    const beltMatch = beltName
+      ? { $or: [{ beltName }, { beltNames: beltName }] }
+      : beltId
+        ? { $or: [{ beltId }, { beltNames: { $exists: true, $not: { $size: 0 } } }] }
+        : {};
+
+    // 1. Exercise model (warmUp / stretching)
+    const exFilter = { isActive: true, ...beltMatch };
+    if (section) exFilter.section = section;
+    if (equipment) exFilter.equipment = equipment;
+    // Only include exercises that belong to a belt when no specific belt is requested
+    if (!beltName && !beltId) {
+      exFilter.$or = [
+        { beltNames: { $exists: true, $not: { $size: 0 } } },
+        { beltName: { $exists: true, $ne: '' } },
+      ];
+    }
+    const exercises = await Exercise.find(exFilter).sort({ createdAt: 1 });
+
+    // 2. Technique model (training) — only when section is training or unset
+    let techniques = [];
+    if (!section || section === 'training') {
+      const techFilter = { ...beltMatch };
+      if (equipment) techFilter.equipment = equipment;
+      if (!beltName && !beltId) {
+        techFilter.$or = [
+          { beltNames: { $exists: true, $not: { $size: 0 } } },
+          { beltName: { $exists: true, $ne: '' } },
+        ];
+      }
+      techniques = await Technique.find(techFilter).sort({ createdAt: 1 });
+    }
+
+    // Normalise techniques to exercise shape
+    const normalisedTechniques = techniques.map(t => ({
+      _id: t._id,
+      name: t.name,
+      section: 'training',
+      equipment: t.equipment || 'chair',
+      level: t.difficulty ? [t.difficulty] : [],
+      beltNames: t.beltNames || [],
+      beltName: t.beltName || '',
+      image: t.image || null,
+      videoUrl: t.videoUrl || '',
+      steps: t.steps || [],
+      tips: t.tips || [],
+      isActive: true,
+      createdAt: t.createdAt,
+      _source: 'technique',
+    }));
+
+    // Merge, deduplicate by _id
+    const seen = new Set();
+    const merged = [];
+    for (const ex of [...exercises, ...normalisedTechniques]) {
+      const key = String(ex._id);
+      if (!seen.has(key)) { seen.add(key); merged.push(ex); }
+    }
+
+    res.json({ status: 'success', data: { exercises: merged } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
@@ -36,9 +94,13 @@ const createExercise = async (req, res) => {
     const level = req.body.levelJson ? JSON.parse(req.body.levelJson) : [];
     const beltNames = req.body.beltNamesJson ? JSON.parse(req.body.beltNamesJson) : [];
     const beltName = beltNames[0] || req.body.beltName || '';
+    const programIds = req.body.programIdsJson ? JSON.parse(req.body.programIdsJson) : [];
+    const programTitles = req.body.programTitlesJson ? JSON.parse(req.body.programTitlesJson) : [];
+    const programId = programIds[0] || req.body.programId || null;
+    const programTitle = programTitles[0] || req.body.programTitle || '';
     const image = req.files?.image?.[0] ? `uploads/exercises/${req.files.image[0].filename}` : null;
     const videoUrl = req.files?.video?.[0] ? `uploads/exercises/${req.files.video[0].filename}` : null;
-    const exercise = new Exercise({ name, section, equipment, level, duration, beltId: beltId || null, beltName, beltNames, image, videoUrl, steps, tips });
+    const exercise = new Exercise({ name, section, equipment, level, duration, beltId: beltId || null, beltName, beltNames, programId, programTitle, programIds, programTitles, image, videoUrl, steps, tips });
     const saved = await exercise.save();
     res.status(201).json({ status: 'success', data: { exercise: saved } });
   } catch (err) {
@@ -70,6 +132,16 @@ const updateExercise = async (req, res) => {
       exercise.markModified('beltNames');
     } else if (req.body.beltName !== undefined) {
       exercise.beltName = req.body.beltName;
+    }
+    if (req.body.programIdsJson !== undefined) {
+      const programIds = JSON.parse(req.body.programIdsJson);
+      const programTitles = req.body.programTitlesJson ? JSON.parse(req.body.programTitlesJson) : [];
+      exercise.programIds = programIds;
+      exercise.programTitles = programTitles;
+      exercise.programId = programIds[0] || null;
+      exercise.programTitle = programTitles[0] || '';
+      exercise.markModified('programIds');
+      exercise.markModified('programTitles');
     }
     if (duration !== undefined) exercise.duration = duration;
     if (isActive !== undefined) exercise.isActive = isActive;

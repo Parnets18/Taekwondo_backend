@@ -98,21 +98,74 @@ const deleteProgram = async (req, res) => {
 
 const getProgramExercises = async (req, res) => {
   try {
-    const filter = { isActive: true };
-    if (req.query.programId) {
-      // Match exercises that have this programId in either legacy field or new array
-      filter.$or = [
-        { programId: req.query.programId },
-        { programIds: req.query.programId },
-      ];
+    const Exercise = require('../models/Exercise');
+    const Technique = require('../models/Technique');
+
+    const { programId, section, equipment, level } = req.query;
+
+    // Helper: build programId match for both legacy and array fields
+    const programMatch = programId
+      ? { $or: [{ programId }, { programIds: programId }] }
+      : { $or: [{ programIds: { $exists: true, $not: { $size: 0 } } }, { programId: { $exists: true, $ne: null } }] };
+
+    // 1. ProgramExercise (legacy dedicated collection)
+    const peFilter = { isActive: true, ...programMatch };
+    if (section) peFilter.section = section;
+    if (equipment) peFilter.equipment = equipment;
+    if (level) peFilter.level = level;
+    const programExercises = await ProgramExercise.find(peFilter).sort({ createdAt: 1 });
+
+    // 2. Exercise model (warmUp / stretching from TechniquesManagement)
+    const exFilter = { isActive: true, ...programMatch };
+    if (section) exFilter.section = section;
+    if (equipment) exFilter.equipment = equipment;
+    if (level) exFilter.level = level;
+    const exercises = await Exercise.find(exFilter).sort({ createdAt: 1 });
+
+    // 3. Technique model (training from TechniquesManagement) — only when section is training or unset
+    let techniques = [];
+    if (!section || section === 'training') {
+      const techFilter = { ...programMatch };
+      if (equipment) techFilter.equipment = equipment;
+      if (level) techFilter.difficulty = level;
+      techniques = await Technique.find(techFilter).sort({ createdAt: 1 });
     }
-    if (req.query.section) filter.section = req.query.section;
-    if (req.query.equipment) filter.equipment = req.query.equipment;
-    if (req.query.level) filter.level = req.query.level;
-    const exercises = await ProgramExercise.find(filter).sort({ createdAt: 1 });
-    const transformedExercises = exercises.map(exercise =>
+
+    // Normalise techniques to exercise shape
+    const normalisedTechniques = techniques.map(t => ({
+      _id: t._id,
+      name: t.name,
+      section: 'training',
+      equipment: t.equipment || 'chair',
+      level: t.difficulty ? [t.difficulty] : [],
+      programIds: t.programIds || [],
+      programTitles: t.programTitles || [],
+      programId: t.programId || null,
+      programTitle: t.programTitle || '',
+      image: t.image || null,
+      videoUrl: t.videoUrl || '',
+      steps: t.steps || [],
+      tips: t.tips || [],
+      isActive: true,
+      createdAt: t.createdAt,
+      _source: 'technique',
+    }));
+
+    // Merge all, deduplicate by _id string
+    const seen = new Set();
+    const merged = [];
+    for (const ex of [...programExercises, ...exercises, ...normalisedTechniques]) {
+      const key = String(ex._id);
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(ex);
+      }
+    }
+
+    const transformedExercises = merged.map(exercise =>
       transformDocumentPaths(exercise, ['image', 'videoUrl'])
     );
+
     res.json({ status: 'success', data: { exercises: transformedExercises } });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });

@@ -4,8 +4,8 @@ const TheoryQuestion = require('../models/TheoryQuestion');
 exports.getAll = async (req, res) => {
   try {
     const filter = { isActive: true };
-    if (req.query.beltLevel) filter.beltLevel = req.query.beltLevel;
-    const items = await TheoryQuestion.find(filter).sort({ beltLevel: 1, order: 1 });
+    if (req.query.beltLevel) filter.beltLevel = { $in: [req.query.beltLevel] };
+    const items = await TheoryQuestion.find(filter).sort({ order: 1 });
     res.json({ status: 'success', data: items });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
@@ -16,8 +16,8 @@ exports.getAll = async (req, res) => {
 exports.getAllAdmin = async (req, res) => {
   try {
     const filter = {};
-    if (req.query.beltLevel) filter.beltLevel = req.query.beltLevel;
-    const items = await TheoryQuestion.find(filter).sort({ beltLevel: 1, order: 1 });
+    if (req.query.beltLevel) filter.beltLevel = { $in: [req.query.beltLevel] };
+    const items = await TheoryQuestion.find(filter).sort({ order: 1 });
     res.json({ status: 'success', data: items });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });

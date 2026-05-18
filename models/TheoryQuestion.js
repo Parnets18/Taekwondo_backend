@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const theoryQuestionSchema = new mongoose.Schema({
   beltLevel: {
-    type: String,
+    type: [String],   // array — one question can belong to multiple belt levels
     required: true,
   },
   question:  { type: String, required: true },

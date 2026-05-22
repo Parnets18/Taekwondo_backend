@@ -127,7 +127,14 @@ function parseBody(raw, files) {
           body[k] = body[k].map(point => {
             if (point.kickEntries && Array.isArray(point.kickEntries) && point.kickEntries.length > 0) {
               const patternEntries = [];
-              point.kickEntries.forEach(entry => {
+              // Preserve kickEntries exactly as-is (including groupId) — only derive patternEntries for mobile app
+              const kickEntriesWithGroupId = point.kickEntries.map(entry => ({
+                groupId: entry.groupId || '',
+                patternName: entry.patternName || '',
+                number: entry.number || '',
+                rows: entry.rows || []
+              }));
+              kickEntriesWithGroupId.forEach(entry => {
                 if (entry.rows && Array.isArray(entry.rows) && entry.rows.length > 0) {
                   entry.rows.forEach(row => {
                     patternEntries.push({
@@ -149,7 +156,7 @@ function parseBody(raw, files) {
               return {
                 ...point,
                 patternEntries,
-                kickEntries: point.kickEntries
+                kickEntries: kickEntriesWithGroupId
               };
             }
             // No kickEntries — clear patternEntries too so stale data isn't kept

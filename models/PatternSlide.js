@@ -21,6 +21,7 @@ const kickRowSchema = new mongoose.Schema({
 }, { _id: false });
 
 const kickEntrySchema = new mongoose.Schema({
+  groupId:     { type: String, default: '' }, // groups multiple entries into one box in the admin UI
   patternName: { type: String, default: '' },
   number:      { type: String, default: '' },
   rows:        { type: [kickRowSchema], default: [] }, // multiple korean term + description
